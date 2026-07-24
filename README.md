@@ -32,18 +32,19 @@ L'audit affiche une boucle distincte pour chaque opération indépendante :
 
 1. génération des placements et parité des contacts;
 2. caractérisation structurelle de chaque système d'équations de mots;
-3. résolution bornée des équations de mots, avec diagnostic de troncature;
+3. résolution bornée des équations de mots, avec diagnostics séparés de profondeur, d'états et de plafond cyclique;
 4. résolution des classes d'angles ponctuels;
-5. tour total du contour prototype;
-6. contraintes aux deux pôles;
-7. obstruction translationnelle du prototype;
-8. diagnostic optionnel des quatre parités;
-9. construction des contours intérieur et extérieur;
-10. résolution conjointe exacte des rotations;
-11. obstructions translationnelles conjointes élémentaires;
-12. coïncidences forcées de points;
-13. Z3/NLSAT, uniquement sur les survivants de toutes les étapes précédentes;
-14. écriture des rapports.
+5. canonicalisation optionnelle des solutions décorées, mappings des deux copies inclus;
+6. tour total du contour prototype;
+7. contraintes aux deux pôles;
+8. obstruction translationnelle du prototype;
+9. diagnostic optionnel des quatre parités;
+10. construction des contours intérieur et extérieur;
+11. résolution conjointe exacte des rotations;
+12. obstructions translationnelles conjointes élémentaires;
+13. coïncidences forcées de points;
+14. Z3/NLSAT, uniquement sur les survivants de toutes les étapes précédentes;
+15. écriture des rapports.
 
 L'audit écrit :
 
@@ -125,6 +126,80 @@ ne jamais terminer sur un système cyclique :
 py -3 project_cli.py audit --max-depth 0 --max-states 10000 --skip-z3
 ```
 
+### Plafond temporaire des cycles formels
+
+Une troisième limite, indépendante de la profondeur et du nombre d'états,
+contrôle les échos dus au déroulement répété du même système résiduel :
+
+```python
+DEFAULT_FORMAL_MAX_CYCLE_UNROLLS = 3
+```
+
+Avec la valeur `3`, une branche peut revenir trois fois sur le même système
+résiduel. Le retour suivant est coupé. Cette politique ne reconnaît pas encore
+une famille paramétrique `U^n`; elle limite seulement son déroulement fini.
+Chaque coupure est donc enregistrée comme une **troncature**, même si la branche
+a déjà produit des profils.
+
+Pour changer le plafond :
+
+```bat
+py -3 project_cli.py audit --max-depth 20 --max-states 10000 --max-cycle-unrolls 3 --skip-z3
+```
+
+Pour désactiver uniquement cette feature et retrouver la recherche bornée par
+profondeur/états seule :
+
+```bat
+py -3 project_cli.py audit --max-cycle-unrolls 0 --skip-z3
+```
+
+Les compteurs spécifiques sont notamment :
+
+```text
+bounded_search_cycle_capped_case_count
+bounded_search_cycle_capped_with_terminal_profiles_case_count
+bounded_search_cycle_capped_without_terminal_profiles_case_count
+bounded_search_cycle_pruned_state_count
+```
+
+Le plafond cyclique est volontairement isolé dans `formal_cycle_cap.py`. Il ne
+modifie ni les règles de Nielsen/Levi, ni la canonicalisation, ni les filtres
+géométriques.
+
+### Clé canonique de solution décorée
+
+Après la résolution des angles, l'audit calcule par défaut une clé pour la
+**solution complète** : contour terminal et appariements des deux copies. La clé
+inclut les positions terminales des segments appariés, leur sens de parcours et
+la parité directe/réfléchie de chaque copie.
+
+Elle identifie comme équivalents :
+
+- l'échange de `P0` et `P1`;
+- le renommage et la réorientation des variables de courbe;
+- le renommage signé des classes d'angles;
+- la permutation des deux copies identiques;
+- le miroir global de toute la configuration.
+
+Elle ne fusionne pas un changement de parité d'une seule copie ni un autre
+appariement de segments. Elle ne reconnaît pas encore les familles
+paramétriques issues de cycles. Aucun profil n'est supprimé : chaque
+registrement reçoit seulement `solution_equivalence.key`, la taille de sa
+classe observée et l'identifiant d'un représentant.
+
+Le résumé contient :
+
+```text
+decorated_solution_canonicalization_summary
+```
+
+Pour désactiver cette étape sans toucher au solveur formel :
+
+```bat
+py -3 project_cli.py audit --skip-solution-canonicalization
+```
+
 Z3 est exécuté par défaut. Pour l'omettre :
 
 ```bat
@@ -194,6 +269,53 @@ recherche. Le lecteur parcourt le tableau JSON progressivement et ne conserve
 que la représentation légère nécessaire à l'optimisation, plutôt que le gros
 enregistrement détaillé de chaque profil.
 
+### Reprise transactionnelle
+
+La recherche géométrique utilise par défaut une base SQLite :
+
+```text
+geometry_search_checkpoint.sqlite3
+```
+
+Après chaque profil terminé, elle enregistre dans une transaction durable :
+
+- `found` avec le candidat complet;
+- `no_candidate`;
+- `error` avec le message d'erreur.
+
+La même commande reprend automatiquement exactement le même run :
+
+```bat
+py -3 project_cli.py geometry --intermediate-points 3
+```
+
+L'identité du run comprend le contenu SHA-256 du fichier de survivants, la
+liste ordonnée des profils sélectionnés et tous les réglages numériques. Un
+changement de `--intermediate-points`, `--attempts`, `--max-iterations`,
+`--population-size`, `--seed`, `--max-profiles` ou du fichier d'entrée crée un
+run séparé dans la même base; les résultats incompatibles ne sont jamais
+mélangés.
+
+En cas de `Ctrl+C`, tous les profils précédemment terminés restent acquis et le
+profil interrompu sera repris. `geometric_candidates.json` est aussi réécrit
+avec les candidats déjà enregistrés.
+
+Commandes utiles :
+
+```bat
+py -3 project_cli.py geometry --intermediate-points 3 --fresh
+py -3 project_cli.py geometry --intermediate-points 3 --retry-errors
+py -3 project_cli.py geometry --checkpoint autre_checkpoint.sqlite3
+py -3 project_cli.py geometry --no-resume
+```
+
+- `--fresh` efface uniquement le run correspondant exactement à la configuration courante;
+- `--retry-errors` rejoue les profils enregistrés en erreur;
+- `--no-resume` désactive totalement SQLite et rétablit le comportement one-shot.
+
+Le mécanisme de reprise est isolé dans `geometry_checkpoint.py`; il ne connaît
+pas les mathématiques de l'optimiseur.
+
 Une solution trouvée est un certificat concret **dans le modèle polygonal
 configuré**. Un échec de recherche ne prouve rien. Ce programme ne vérifie pas
 encore la disjonction complète des trois copies.
@@ -227,6 +349,9 @@ settings.py                        réglages et noms canoniques
 project_cli.py                     point d'entrée unique
 audit_geometric_filters.py         audit séquentiel et rapports
 formal_equation_audit.py           caractérisation des équations de mots
+formal_cycle_cap.py                 plafond indépendant des déroulements cycliques
+solution_canonicalization.py        clé du contour et des deux mappings
+geometry_checkpoint.py              reprise transactionnelle SQLite
 external_boundary_constraints.py   système intérieur/extérieur
 forced_point_coincidence.py        coïncidences forcées
 joint_translation_z3.py            filtre polynomial Z3/NLSAT

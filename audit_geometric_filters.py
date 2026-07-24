@@ -22,7 +22,9 @@ import forced_point_coincidence as forced_points
 import formal_equation_audit as formal_audit
 import joint_translation_z3 as z3_backend
 import method_status
+import profile_formatter
 import results_export
+import solution_canonicalization
 import settings
 import symbolic_enumerator as base
 
@@ -78,6 +80,8 @@ class ProfileWork:
     forced_point_error: Optional[str] = None
     z3_problem: Optional[z3_backend.Z3Problem] = None
     z3_result: Optional[z3_backend.Z3Result] = None
+    canonical_solution: Optional[solution_canonicalization.CanonicalSolution] = None
+    canonicalization_error: Optional[str] = None
 
     @property
     def core_pass(self) -> bool:
@@ -268,6 +272,8 @@ def audit(
     max_depth: Optional[int],
     max_states: Optional[int],
     *,
+    max_cycle_unrolls: Optional[int] = settings.DEFAULT_FORMAL_MAX_CYCLE_UNROLLS,
+    canonicalize_solutions: bool = settings.DEFAULT_ENABLE_SOLUTION_CANONICALIZATION,
     collect_profiles: bool = False,
     collect_survivors: bool = False,
     run_z3: bool = settings.DEFAULT_RUN_Z3,
@@ -278,7 +284,7 @@ def audit(
     parity_diagnostics: bool = settings.DEFAULT_RUN_PARITY_DIAGNOSTICS,
 ) -> Dict[str, object]:
     progress = AuditProgress(show_progress, progress_interval)
-    stage_total = 14 if parity_diagnostics else 13
+    stage_total = (14 if parity_diagnostics else 13) + int(canonicalize_solutions)
     stage = 0
 
     stage += 1
@@ -316,7 +322,10 @@ def audit(
     cases_with_terminals = set()
     for case_index, case in enumerate(cases, start=1):
         search_audit = formal_audit.explore_case_with_audit(
-            case, max_depth=max_depth, max_states=max_states
+            case,
+            max_depth=max_depth,
+            max_states=max_states,
+            max_cycle_unrolls=max_cycle_unrolls,
         )
         case_audit_records[case.case_id]["bounded_search"] = search_audit.to_dict()
         profile_ids: List[int] = []
@@ -373,6 +382,48 @@ def audit(
     progress.done(f"{len(works) - angle_errors} angle systems resolved; {angle_errors} errors")
 
     angle_ready = [work for work in works if work.angle_solution is not None]
+
+    canonical_class_members: Dict[str, List[int]] = {}
+    if canonicalize_solutions:
+        stage += 1
+        progress.stage(
+            stage,
+            stage_total,
+            "Canonicalizing decorated solutions (contour plus both copy mappings)",
+        )
+        canonical_errors = 0
+        for index, work in enumerate(angle_ready, start=1):
+            try:
+                formal_profile = profile_formatter.build_formal_profile(
+                    work.terminal.case,
+                    work.terminal.state,
+                    work.angle_solution,
+                )
+                work.canonical_solution = solution_canonicalization.canonicalize_terminal_solution(
+                    work.terminal.case,
+                    work.terminal.state,
+                    formal_profile,
+                )
+                canonical_class_members.setdefault(
+                    work.canonical_solution.key, []
+                ).append(work.terminal.profile_id)
+            except Exception as exc:
+                work.canonicalization_error = f"{type(exc).__name__}: {exc}"
+                canonical_errors += 1
+            progress.update(
+                index,
+                len(angle_ready),
+                f"profiles processed: {index}/{len(angle_ready)}; canonicalization errors: {canonical_errors}",
+            )
+        duplicate_instances = sum(
+            max(0, len(profile_ids) - 1)
+            for profile_ids in canonical_class_members.values()
+        )
+        progress.done(
+            f"{len(canonical_class_members)} decorated solution classes; "
+            f"{duplicate_instances} additional equivalent profile instances; "
+            f"{canonical_errors} errors"
+        )
 
     stage += 1
     progress.stage(stage, stage_total, "Checking total turning of the prototype contour")
@@ -649,10 +700,48 @@ def audit(
             "structure": case_audit["structure"],
             "bounded_search": case_audit["bounded_search"],
         }
+        if work.canonical_solution is not None:
+            members = canonical_class_members.get(work.canonical_solution.key, [])
+            equivalence = work.canonical_solution.to_record()
+            equivalence.update(
+                {
+                    "class_size_within_bounded_terminal_output": len(members),
+                    "representative_profile_id": min(members) if members else work.terminal.profile_id,
+                }
+            )
+            record["solution_equivalence"] = equivalence
+            record["terminal_mapping"] = work.canonical_solution.terminal_mapping
+        elif canonicalize_solutions:
+            record["solution_equivalence"] = {
+                "schema_version": solution_canonicalization.SCHEMA_VERSION,
+                "status": "error",
+                "error": work.canonicalization_error,
+            }
         if collect_profiles:
             detailed_profiles.append(record)
         if collect_survivors and work.final_pass:
             survivor_profiles.append(record)
+
+    canonical_class_sizes = [
+        len(profile_ids) for profile_ids in canonical_class_members.values()
+    ]
+    canonicalization_summary = {
+        "enabled": canonicalize_solutions,
+        "schema_version": solution_canonicalization.SCHEMA_VERSION,
+        "profile_instances_with_key": sum(canonical_class_sizes),
+        "unique_decorated_solution_class_count": len(canonical_class_sizes),
+        "additional_equivalent_profile_instance_count": sum(
+            max(0, size - 1) for size in canonical_class_sizes
+        ),
+        "largest_class_size": max(canonical_class_sizes, default=0),
+        "canonicalization_error_count": sum(
+            1 for work in angle_ready if work.canonicalization_error is not None
+        ),
+        "deduplication_applied": False,
+        "mapping_included": True,
+        "global_mirror_identified": True,
+        "parametric_cycle_families_identified": False,
+    }
 
     result = {
         "scope": {
@@ -661,10 +750,13 @@ def audit(
             "cases_with_at_least_one_terminal_profile_in_bound": len(cases_with_terminals),
             "max_solver_depth_per_case": max_depth,
             "max_solver_states_per_case": max_states,
+            "max_cycle_unrolls_per_residual_state": max_cycle_unrolls,
+            "solution_canonicalization_enabled": canonicalize_solutions,
             "exhaustiveness": "bounded formal-word enumeration; geometric filters are necessary-condition filters",
         },
         "method_status": method_status.method_registry(),
         "formal_equation_audit_summary": formal_audit_summary,
+        "decorated_solution_canonicalization_summary": canonicalization_summary,
         "physical_pipeline_counts": physical_counts,
         "comparative_parity_impact_counts": comparative_counts,
         "experimental_pipeline_counts": experimental_counts,
@@ -672,8 +764,9 @@ def audit(
         "pipeline_sequence": [
             "placement generation and contact parity",
             "formal equation structure audit",
-            "bounded formal word solving with truncation diagnostics",
+            "bounded formal word solving with depth/state/cycle-cap truncation diagnostics",
             "point-angle class resolution",
+            "optional decorated-solution canonicalization including copy mappings",
             "prototype total-turn filter",
             "two-pole angle filter",
             "prototype translation-holonomy obstruction",
@@ -726,6 +819,15 @@ def build_parser() -> argparse.ArgumentParser:
             f"Use {settings.FORMAL_SOLVER_UNLIMITED_VALUE} for no state bound; an unbounded search may not terminate."
         ),
     )
+    parser.add_argument(
+        "--max-cycle-unrolls",
+        type=int,
+        default=settings.DEFAULT_FORMAL_MAX_CYCLE_UNROLLS,
+        help=(
+            "Temporary maximum number of returns to the same residual equation "
+            "system along one branch. 0 disables this independent anti-echo cap."
+        ),
+    )
     parser.add_argument("--progress-interval", type=int, default=settings.DEFAULT_AUDIT_PROGRESS_INTERVAL)
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--output", type=Path, default=Path(settings.AUDIT_SUMMARY_FILENAME))
@@ -742,6 +844,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--skip-parity-diagnostics", action="store_true")
+    parser.add_argument(
+        "--skip-solution-canonicalization",
+        action="store_true",
+        help="Disable decorated-solution keys without changing any formal or geometric filter.",
+    )
     z3_group = parser.add_mutually_exclusive_group()
     z3_group.add_argument("--run-z3", dest="run_z3", action="store_true")
     z3_group.add_argument("--skip-z3", dest="run_z3", action="store_false")
@@ -784,15 +891,20 @@ def main() -> int:
     try:
         max_depth = _normalize_optional_limit(args.max_depth, "--max-depth")
         max_states = _normalize_optional_limit(args.max_states, "--max-states")
+        max_cycle_unrolls = _normalize_optional_limit(
+            args.max_cycle_unrolls, "--max-cycle-unrolls"
+        )
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
 
     if not args.quiet:
         depth_text = "unbounded" if max_depth is None else str(max_depth)
         states_text = "unbounded" if max_states is None else str(max_states)
+        cycle_text = "disabled" if max_cycle_unrolls is None else str(max_cycle_unrolls)
         print(
             f"Formal solver bounds: max depth per system = {depth_text}; "
-            f"max visited states per system = {states_text}",
+            f"max visited states per system = {states_text}; "
+            f"max residual-cycle unrolls = {cycle_text}",
             flush=True,
         )
         if max_depth is None or max_states is None:
@@ -804,6 +916,8 @@ def main() -> int:
     result = audit(
         max_depth,
         max_states,
+        max_cycle_unrolls=max_cycle_unrolls,
+        canonicalize_solutions=not args.skip_solution_canonicalization,
         collect_profiles=(
             not args.no_profiles_output and not args.no_detailed_profiles_output
         ),
@@ -830,6 +944,7 @@ def main() -> int:
                 "case_count": len(formal_equation_cases),
                 "max_solver_depth_per_case": max_depth,
                 "max_solver_states_per_case": max_states,
+                "max_cycle_unrolls_per_residual_state": max_cycle_unrolls,
             },
             "summary": result["formal_equation_audit_summary"],
             "cases": formal_equation_cases,
@@ -844,6 +959,8 @@ def main() -> int:
             "bounded": True,
             "max_solver_depth_per_case": max_depth,
             "max_solver_states_per_case": max_states,
+            "max_cycle_unrolls_per_residual_state": max_cycle_unrolls,
+            "solution_canonicalization_enabled": not args.skip_solution_canonicalization,
         }
         # Save the operationally important survivor file first.  A failure while
         # writing the much larger all-profile export therefore cannot erase the

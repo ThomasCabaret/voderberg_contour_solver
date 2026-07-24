@@ -5,6 +5,8 @@
     "cases_with_at_least_one_terminal_profile_in_bound": 632,
     "max_solver_depth_per_case": 20,
     "max_solver_states_per_case": 10000,
+    "max_cycle_unrolls_per_residual_state": 3,
+    "solution_canonicalization_enabled": true,
     "exhaustiveness": "bounded formal-word enumeration; geometric filters are necessary-condition filters"
   },
   "method_status": {
@@ -16,7 +18,17 @@
     "formal_word_solver": {
       "status": "bounded_incomplete_enumeration",
       "automatic_rejection_allowed": false,
-      "description": "Every emitted terminal profile is checked, but the audit explores only configured depth/state bounds."
+      "description": "Every emitted terminal profile is checked, but the audit explores only configured depth/state bounds and may also apply an explicitly reported temporary cycle-unroll cap."
+    },
+    "formal_cycle_unroll_cap": {
+      "status": "bounded_incomplete_enumeration",
+      "automatic_rejection_allowed": false,
+      "description": "Independent anti-echo policy. It prunes a branch after repeated returns to the same residual system, reports every hit as truncation, and does not recognize parametric families."
+    },
+    "decorated_solution_canonicalization": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": false,
+      "description": "Canonical key for the terminal contour together with both copy mappings, modulo pole exchange, curve/angle renaming, copy permutation, and global mirror. It annotates but does not delete profiles."
     },
     "point_angle_solver": {
       "status": "exact_within_model",
@@ -119,12 +131,16 @@
       "quadratic": 40
     },
     "terminal_profile_instances_by_occurrence_class": {
-      "cubic": 106402,
-      "quadratic": 29016
+      "cubic": 66246,
+      "quadratic": 13000
     },
     "bounded_search_truncated_case_count": 1241,
-    "bounded_search_state_limited_case_count": 322,
-    "bounded_search_depth_limited_case_count": 939,
+    "bounded_search_state_limited_case_count": 272,
+    "bounded_search_depth_limited_case_count": 536,
+    "bounded_search_cycle_capped_case_count": 887,
+    "bounded_search_cycle_capped_with_terminal_profiles_case_count": 318,
+    "bounded_search_cycle_capped_without_terminal_profiles_case_count": 569,
+    "bounded_search_cycle_pruned_state_count": 92194,
     "bounded_search_exhausted_case_count": 1031,
     "truncated_case_count_by_occurrence_class": {
       "cubic": 994,
@@ -134,36 +150,50 @@
       "quadratic": "Every initial variable occurs at most twice across all equation sides.",
       "search_exhausted": "The current transition-system exploration emptied its queue without hitting either configured bound.",
       "search_truncated_with_terminals": "At least one terminal profile was found, but more terminal profiles may exist beyond the configured bounds.",
-      "search_truncated_without_terminals": "No terminal profile was found, and existence remains unresolved because a configured bound was hit.",
+      "search_truncated_without_terminals": "No terminal profile was found, and existence remains unresolved because a configured depth/state bound or the temporary cycle-unroll cap was hit.",
+      "cycle_unroll_cap": "A temporary anti-echo policy prunes a branch after the configured number of returns to the same residual equation system. It is not parametric cycle recognition and every hit is reported as truncation.",
       "exhausted_without_terminals": "No terminal profile is reachable in the explored transition graph. This is not a general completeness theorem for arbitrary word equations.",
       "method_selection": "Try a complete quadratic Nielsen-graph solver for quadratic systems before implementing general recompression."
     }
   },
+  "decorated_solution_canonicalization_summary": {
+    "enabled": true,
+    "schema_version": "decorated-solution-v1",
+    "profile_instances_with_key": 79246,
+    "unique_decorated_solution_class_count": 28657,
+    "additional_equivalent_profile_instance_count": 50589,
+    "largest_class_size": 4,
+    "canonicalization_error_count": 0,
+    "deduplication_applied": false,
+    "mapping_included": true,
+    "global_mirror_identified": true,
+    "parametric_cycle_families_identified": false
+  },
   "physical_pipeline_counts": {
-    "formal_terminal_profile_instances": 135418,
-    "rejected_by_angular_filters_under_placement_parity": 91852,
-    "additionally_rejected_by_translation_holonomy": 34,
-    "remaining_after_all_current_filters": 43532,
-    "would_be_pruned_at_placement_if_reflections_disabled": 130176
+    "formal_terminal_profile_instances": 79246,
+    "rejected_by_angular_filters_under_placement_parity": 56474,
+    "additionally_rejected_by_translation_holonomy": 16,
+    "remaining_after_all_current_filters": 22756,
+    "would_be_pruned_at_placement_if_reflections_disabled": 75928
   },
   "comparative_parity_impact_counts": {
     "rejected_by_angular_filters_for_all_four_parity_choices": 3,
     "rejected_by_SE2_filters_for_all_four_parity_choices": 3,
-    "additionally_rejected_by_placement_time_contact_parity": 91883
+    "additionally_rejected_by_placement_time_contact_parity": 56487
   },
   "experimental_pipeline_counts": {
-    "profiles_examined": 43532,
+    "profiles_examined": 22756,
     "external_boundary_build_errors": 0,
-    "exact_joint_rotation_rejections": 35796,
+    "exact_joint_rotation_rejections": 17770,
     "exact_elementary_joint_translation_rejections": 0,
     "exact_inner_forced_point_coincidence_rejections": 0,
     "exact_outer_forced_point_coincidence_rejections": 0,
     "exact_forced_point_coincidence_rejections_total": 0,
     "forced_point_filter_errors": 0,
-    "exact_encoded_model_rejections_total": 35796,
-    "additional_exact_rejections_among_core_survivors": 35796,
-    "core_survivors_after_experimental_exact_rejections": 7736,
-    "z3_problems_generated_for_core_survivors": 7736,
+    "exact_encoded_model_rejections_total": 17770,
+    "additional_exact_rejections_among_core_survivors": 17770,
+    "core_survivors_after_experimental_exact_rejections": 4986,
+    "z3_problems_generated_for_core_survivors": 4986,
     "z3_encoding_unsupported": 0,
     "z3_encoding_errors": 0,
     "z3_checks_requested": 0,
@@ -173,19 +203,20 @@
     "z3_timeouts": 0,
     "z3_not_installed": 0,
     "z3_solver_errors_or_unknown": 0,
-    "final_survivors_after_z3_unsat_rejections": 7736
+    "final_survivors_after_z3_unsat_rejections": 4986
   },
   "placement_contact_parity_counts": {
-    "DD": 5242,
-    "DR": 24396,
-    "RD": 24396,
-    "RR": 81384
+    "DD": 3318,
+    "DR": 18263,
+    "RD": 18263,
+    "RR": 39402
   },
   "pipeline_sequence": [
     "placement generation and contact parity",
     "formal equation structure audit",
-    "bounded formal word solving with truncation diagnostics",
+    "bounded formal word solving with depth/state/cycle-cap truncation diagnostics",
     "point-angle class resolution",
+    "optional decorated-solution canonicalization including copy mappings",
     "prototype total-turn filter",
     "two-pole angle filter",
     "prototype translation-holonomy obstruction",

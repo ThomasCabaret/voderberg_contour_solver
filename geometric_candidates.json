@@ -5,7 +5,18 @@
     "intermediate_points_per_variable": 3,
     "edges_per_variable": 4,
     "method": "heuristic configurable polyline templates with differential evolution",
-    "proof_status": "found candidates are concrete for the configured polygonal model; failures are inconclusive"
+    "proof_status": "found candidates are concrete for the configured polygonal model; failures are inconclusive",
+    "transactional_checkpoint": "geometry_search_checkpoint.sqlite3",
+    "search_summary": {
+      "run_key": "57460064a5bc5714dee8602743cc5536d8f68cb127b7c5bed1c1f92b25b3ae0e",
+      "selected_profile_count": 4986,
+      "completed_profile_count": 75,
+      "remaining_profile_count": 4911,
+      "found_count": 0,
+      "no_candidate_count": 75,
+      "error_count": 0,
+      "complete": false
+    }
   },
   "candidates": []
 }

@@ -12,6 +12,7 @@ from collections import Counter, defaultdict, deque
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+import formal_cycle_cap
 import symbolic_enumerator as base
 
 
@@ -29,11 +30,19 @@ class SolverSearchAudit:
     structural_state_revisit_count: int
     terminal_count: int
     branch_counts: Tuple[Tuple[str, int], ...]
+    cycle_unroll_cap_enabled: bool = False
+    max_cycle_unrolls: Optional[int] = None
+    cycle_unroll_pruned_state_count: int = 0
+    cycle_unroll_cap_hit: bool = False
     initial_inconsistent: bool = False
 
     @property
     def search_truncated(self) -> bool:
-        return self.state_limit_hit or self.depth_frontier_cut_count > 0
+        return (
+            self.state_limit_hit
+            or self.depth_frontier_cut_count > 0
+            or self.cycle_unroll_cap_hit
+        )
 
     @property
     def search_exhausted_within_current_graph(self) -> bool:
@@ -91,10 +100,19 @@ class SolverSearchAudit:
                 self.residual_equation_revisit_count
                 or self.structural_state_revisit_count
             ),
+            "cycle_unroll_cap_enabled": self.cycle_unroll_cap_enabled,
+            "max_cycle_unrolls": self.max_cycle_unrolls,
+            "cycle_unroll_pruned_state_count": self.cycle_unroll_pruned_state_count,
+            "cycle_unroll_cap_hit": self.cycle_unroll_cap_hit,
             "terminal_count": self.terminal_count,
             "has_terminal_profiles": self.has_terminal_profiles,
             "branch_counts": dict(self.branch_counts),
             "search_truncated": self.search_truncated,
+            "search_truncation_reasons": {
+                "depth_bound": self.depth_frontier_cut_count > 0,
+                "state_bound": self.state_limit_hit,
+                "cycle_unroll_cap": self.cycle_unroll_cap_hit,
+            },
             "search_exhausted_within_current_graph": self.search_exhausted_within_current_graph,
             "search_outcome_class": self.search_outcome_class,
             "terminal_profile_set_may_be_incomplete": self.terminal_profile_set_may_be_incomplete,
@@ -244,14 +262,20 @@ def analyze_case_structure(case: base.PlacementCase) -> Dict[str, object]:
     }
 
 
+def _residual_key(equations: Sequence[base.Equation]) -> Tuple[str, ...]:
+    return tuple(equation.to_text() for equation in equations)
+
+
 def explore_case_with_audit(
     case: base.PlacementCase,
     *,
     max_depth: Optional[int],
     max_states: Optional[int],
+    max_cycle_unrolls: Optional[int] = None,
 ) -> SolverSearchAudit:
-    """Run the same bounded search as the production enumerator and collect diagnostics."""
+    """Run the bounded search and collect independent truncation diagnostics."""
     initial = base.initial_solver_state(case)
+    cycle_cap_enabled = max_cycle_unrolls is not None
     if initial is None:
         return SolverSearchAudit(
             terminal_states=(),
@@ -264,13 +288,20 @@ def explore_case_with_audit(
             queue_size_when_state_limit_hit=0,
             residual_equation_revisit_count=0,
             structural_state_revisit_count=0,
+            cycle_unroll_cap_enabled=cycle_cap_enabled,
+            max_cycle_unrolls=max_cycle_unrolls,
+            cycle_unroll_pruned_state_count=0,
+            cycle_unroll_cap_hit=False,
             terminal_count=0,
             branch_counts=(),
             initial_inconsistent=True,
         )
 
-    queue = deque([(initial, tuple())])
-    seen_at_depth: set[Tuple[int, Tuple[base.Equation, ...], Tuple[Tuple[str, base.Word], ...]]] = set()
+    initial_history = formal_cycle_cap.CycleVisitHistory.start(
+        _residual_key(initial.equations)
+    )
+    queue = deque([(initial, tuple(), initial_history)])
+    seen_at_depth = set()
     seen_structural: set[Tuple[Tuple[base.Equation, ...], Tuple[Tuple[str, base.Word], ...]]] = set()
     seen_residual: set[Tuple[base.Equation, ...]] = set()
     terminal_states: List[Tuple[base.SolverState, Tuple[str, ...]]] = []
@@ -284,6 +315,7 @@ def explore_case_with_audit(
     queue_size_when_state_limit_hit = 0
     residual_revisits = 0
     structural_revisits = 0
+    cycle_unroll_pruned_state_count = 0
 
     while queue:
         if max_states is not None and visited_states >= max_states:
@@ -291,11 +323,12 @@ def explore_case_with_audit(
             queue_size_when_state_limit_hit = len(queue)
             break
 
-        state, derivation = queue.popleft()
+        state, derivation, cycle_history = queue.popleft()
         visited_states += 1
         max_depth_reached = max(max_depth_reached, state.depth)
 
-        depth_key = (state.depth, state.equations, state.environment)
+        cycle_signature = cycle_history.signature() if cycle_cap_enabled else ()
+        depth_key = (state.depth, state.equations, state.environment, cycle_signature)
         if depth_key in seen_at_depth:
             duplicates += 1
             continue
@@ -327,8 +360,19 @@ def explore_case_with_audit(
         ):
             branch_counts[branch_name] += 1
             child = base.advance_state(state, substitution)
-            if child is not None:
-                queue.append((child, derivation + (branch_name,)))
+            if child is None:
+                continue
+            child_history = cycle_history
+            if child.equations:
+                child_history, capped = cycle_history.advance(
+                    _residual_key(child.equations), max_cycle_unrolls
+                )
+                if capped:
+                    cycle_unroll_pruned_state_count += 1
+                    continue
+                if child_history is None:
+                    raise RuntimeError("Cycle history unexpectedly missing")
+            queue.append((child, derivation + (branch_name,), child_history))
 
     return SolverSearchAudit(
         terminal_states=tuple(terminal_states),
@@ -341,6 +385,10 @@ def explore_case_with_audit(
         queue_size_when_state_limit_hit=queue_size_when_state_limit_hit,
         residual_equation_revisit_count=residual_revisits,
         structural_state_revisit_count=structural_revisits,
+        cycle_unroll_cap_enabled=cycle_cap_enabled,
+        max_cycle_unrolls=max_cycle_unrolls,
+        cycle_unroll_pruned_state_count=cycle_unroll_pruned_state_count,
+        cycle_unroll_cap_hit=cycle_unroll_pruned_state_count > 0,
         terminal_count=len(terminal_states),
         branch_counts=tuple(sorted(branch_counts.items())),
     )
@@ -400,6 +448,22 @@ def summarize_case_audits(case_records: Sequence[Mapping[str, object]]) -> Dict[
         for record in case_records
         if record["bounded_search"]["depth_frontier_cut_count"] > 0
     )
+    cycle_capped_cases = sum(
+        1
+        for record in case_records
+        if record["bounded_search"].get("cycle_unroll_cap_hit", False)
+    )
+    cycle_pruned_states = sum(
+        int(record["bounded_search"].get("cycle_unroll_pruned_state_count", 0))
+        for record in case_records
+    )
+    cycle_capped_with_terminals = sum(
+        1
+        for record in case_records
+        if record["bounded_search"].get("cycle_unroll_cap_hit", False)
+        and record["bounded_search"]["terminal_count"] > 0
+    )
+    cycle_capped_without_terminals = cycle_capped_cases - cycle_capped_with_terminals
     exhausted_cases = sum(
         1
         for record in case_records
@@ -444,13 +508,18 @@ def summarize_case_audits(case_records: Sequence[Mapping[str, object]]) -> Dict[
         "bounded_search_truncated_case_count": truncated_cases,
         "bounded_search_state_limited_case_count": state_limited_cases,
         "bounded_search_depth_limited_case_count": depth_limited_cases,
+        "bounded_search_cycle_capped_case_count": cycle_capped_cases,
+        "bounded_search_cycle_capped_with_terminal_profiles_case_count": cycle_capped_with_terminals,
+        "bounded_search_cycle_capped_without_terminal_profiles_case_count": cycle_capped_without_terminals,
+        "bounded_search_cycle_pruned_state_count": cycle_pruned_states,
         "bounded_search_exhausted_case_count": exhausted_cases,
         "truncated_case_count_by_occurrence_class": dict(sorted(truncated_by_class.items())),
         "interpretation": {
             "quadratic": "Every initial variable occurs at most twice across all equation sides.",
             "search_exhausted": "The current transition-system exploration emptied its queue without hitting either configured bound.",
             "search_truncated_with_terminals": "At least one terminal profile was found, but more terminal profiles may exist beyond the configured bounds.",
-            "search_truncated_without_terminals": "No terminal profile was found, and existence remains unresolved because a configured bound was hit.",
+            "search_truncated_without_terminals": "No terminal profile was found, and existence remains unresolved because a configured depth/state bound or the temporary cycle-unroll cap was hit.",
+            "cycle_unroll_cap": "A temporary anti-echo policy prunes a branch after the configured number of returns to the same residual equation system. It is not parametric cycle recognition and every hit is reported as truncation.",
             "exhausted_without_terminals": "No terminal profile is reachable in the explored transition graph. This is not a general completeness theorem for arbitrary word equations.",
             "method_selection": "Try a complete quadratic Nielsen-graph solver for quadratic systems before implementing general recompression.",
         },

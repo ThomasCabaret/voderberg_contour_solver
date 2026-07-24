@@ -271,7 +271,7 @@ function statusBadge(profile) {
 function flipCount(profile) { return Number(profile.mapping.A.flipped) + Number(profile.mapping.B.flipped); }
 function normalizedSearch(profile) {
   return [profile.case_id, profile.profile_id, profile.solution.profile, profile.solution.word_contour, profile.solution.contour, profile.mapping.A.display, profile.mapping.B.display,
-    ...(profile.placement.equations || []), ...(profile.status.reasons || []), profile.experimental?.status || '', profile.experimental?.reason || ''].join(' ').toLowerCase();
+    ...(profile.placement.equations || []), ...(profile.status.reasons || []), profile.experimental?.status || '', profile.experimental?.reason || '', profile.solution_equivalence?.key || ''].join(' ').toLowerCase();
 }
 
 function renderCards() {
@@ -346,7 +346,7 @@ function renderRows() {
     const reason = profile.experimental?.exact_encoded_model_rejection ? `Couche experimentale: ${profile.experimental.status}` : (profile.status.retained ? 'Tous les filtres core passent' : (profile.status.reasons[0] || stageLabels[profile.status.stage]));
     return `<tr data-id="${profile.profile_id}">
       <td>${statusBadge(profile)}</td>
-      <td><strong>#${profile.case_id}</strong><br><span class="muted">profil ${profile.profile_id}</span></td>
+      <td><strong>#${profile.case_id}</strong><br><span class="muted">profil ${profile.profile_id}</span>${profile.solution_equivalence?.key ? `<br><span class="muted">classe ${profile.solution_equivalence.key.slice(0, 10)}… (${profile.solution_equivalence.class_size_within_bounded_terminal_output || 1})</span>` : ''}</td>
       <td>${badge(profile.placement.contact_parity, 'info')}<br><span class="muted">A ${profile.mapping.A.flipped ? 'flip' : 'direct'}; B ${profile.mapping.B.flipped ? 'flip' : 'direct'}</span></td>
       <td class="mapping"><div><strong>A:</strong> ${esc(profile.mapping.A.display)}</div><div><strong>B:</strong> ${esc(profile.mapping.B.display)}</div></td>
       <td class="profile mono">${esc(profile.solution.profile)}</td>
@@ -391,6 +391,14 @@ function showDetail(id) {
     ['Derivation', esc(p.solution.derivation.join(' -> ') || '(terminale directement)')],
     ['Profondeur', p.solution.solver_depth]
   ]);
+  const equivalence = p.solution_equivalence?.key ? dl([
+    ['Cle decoree', `<span class="mono">${esc(p.solution_equivalence.key)}</span>`],
+    ['Taille de classe bornee', p.solution_equivalence.class_size_within_bounded_terminal_output || 1],
+    ['Profil representant', p.solution_equivalence.representative_profile_id ?? p.profile_id],
+    ['Mapping inclus', p.solution_equivalence.copy_mapping_included ? 'oui' : 'non'],
+    ['Miroir global identifie', p.solution_equivalence.global_mirror_identified ? 'oui' : 'non'],
+    ['Cycles parametriques reconnus', p.solution_equivalence.parametric_cycle_families_identified ? 'oui' : 'non']
+  ]) : '<p>Canonicalisation des solutions desactivee ou indisponible.</p>';
   const filterSummary = dl([
     ['Tour total', p.filters.total_turn.feasible ? badge('passe','good') : badge('rejete','bad')],
     ['Equation de tour', `<span class="mono">${esc(p.filters.total_turn.equation)}</span>`],
@@ -415,7 +423,7 @@ function showDetail(id) {
   const raw = `<pre>${esc(JSON.stringify(p, null, 2))}</pre>`;
   document.getElementById('detailBody').innerHTML = `<div class="detail-grid">
     ${detailSection('Appariement', mapping)}${detailSection('Profil solution', solution)}
-    ${detailSection('Filtres principaux', filterSummary, true)}${detailSection('Couche experimentale', experimentalSummary, true)}${detailSection('JSON complet', raw, true)}
+    ${detailSection('Equivalence de solution', equivalence, true)}${detailSection('Filtres principaux', filterSummary, true)}${detailSection('Couche experimentale', experimentalSummary, true)}${detailSection('JSON complet', raw, true)}
   </div>`;
   document.getElementById('detailDialog').showModal();
 }

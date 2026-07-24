@@ -25,6 +25,7 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 import numpy as np
 from scipy.optimize import differential_evolution
 
+import geometry_checkpoint
 import settings
 
 
@@ -634,16 +635,11 @@ def search_profile(
     return best
 
 
-def search_profiles(
+def select_profiles(
     profiles: Sequence[SearchProfile],
     *,
     max_profiles: int,
-    intermediate_points: int,
-    attempts: int,
-    max_iterations: int,
-    population_size: int,
-    seed: int,
-) -> List[CandidateGeometry]:
+) -> List[SearchProfile]:
     selected = list(profiles)
     selected.sort(
         key=lambda profile: (
@@ -656,6 +652,20 @@ def search_profiles(
     )
     if max_profiles > 0:
         selected = selected[:max_profiles]
+    return selected
+
+
+def search_profiles(
+    profiles: Sequence[SearchProfile],
+    *,
+    max_profiles: int,
+    intermediate_points: int,
+    attempts: int,
+    max_iterations: int,
+    population_size: int,
+    seed: int,
+) -> List[CandidateGeometry]:
+    selected = select_profiles(profiles, max_profiles=max_profiles)
     candidates: List[CandidateGeometry] = []
     for index, profile in enumerate(selected, start=1):
         print(
@@ -684,11 +694,22 @@ def search_profiles(
     return candidates
 
 
+def _candidate_record(candidate: object) -> Dict[str, object]:
+    if isinstance(candidate, CandidateGeometry):
+        return candidate.to_dict()
+    if isinstance(candidate, Mapping):
+        return dict(candidate)
+    raise TypeError(f"Unsupported candidate type: {type(candidate).__name__}")
+
+
 def write_candidates(
     path: Path,
     input_path: Path,
-    candidates: Sequence[CandidateGeometry],
+    candidates: Sequence[object],
     intermediate_points: int,
+    *,
+    search_summary: Optional[Mapping[str, object]] = None,
+    checkpoint_path: Optional[Path] = None,
 ) -> None:
     payload = {
         "metadata": {
@@ -703,8 +724,10 @@ def write_candidates(
                 "found candidates are concrete for the configured polygonal model; "
                 "failures are inconclusive"
             ),
+            "transactional_checkpoint": None if checkpoint_path is None else str(checkpoint_path),
+            "search_summary": dict(search_summary or {}),
         },
-        "candidates": [candidate.to_dict() for candidate in candidates],
+        "candidates": [_candidate_record(candidate) for candidate in candidates],
     }
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(
@@ -880,45 +903,254 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-iterations", type=int, default=settings.GEOMETRY_DEFAULT_MAX_ITERATIONS)
     parser.add_argument("--population-size", type=int, default=settings.GEOMETRY_DEFAULT_POPULATION_SIZE)
     parser.add_argument("--seed", type=int, default=settings.GEOMETRY_DEFAULT_SEED)
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=Path(settings.GEOMETRY_CHECKPOINT_FILENAME),
+        help="SQLite checkpoint written transactionally after every completed profile.",
+    )
+    resume_group = parser.add_mutually_exclusive_group()
+    resume_group.add_argument(
+        "--resume",
+        dest="resume",
+        action="store_true",
+        help="Resume a matching checkpoint run (default).",
+    )
+    resume_group.add_argument(
+        "--no-resume",
+        dest="resume",
+        action="store_false",
+        help="Disable checkpointing and use the former one-shot behavior.",
+    )
+    parser.set_defaults(resume=settings.GEOMETRY_DEFAULT_RESUME)
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help="Clear results for the matching checkpoint configuration before starting.",
+    )
+    parser.add_argument(
+        "--retry-errors",
+        action="store_true",
+        help="Retry profiles previously recorded as errors; found/no-candidate rows remain resumed.",
+    )
     parser.add_argument("--view-only", action="store_true", help="Open an existing candidate JSON without searching")
     parser.add_argument("--no-gui", action="store_true", help="Search and write candidates without opening the window")
     return parser
+
+
+def _checkpoint_configuration(args: argparse.Namespace) -> Dict[str, object]:
+    return {
+        "intermediate_points": int(args.intermediate_points),
+        "attempts": max(1, int(args.attempts)),
+        "max_iterations": max(1, int(args.max_iterations)),
+        "population_size": max(2, int(args.population_size)),
+        "seed": int(args.seed),
+        "max_profiles": int(args.max_profiles),
+    }
+
+
+def _summary_dict(summary: geometry_checkpoint.ResumeSummary, *, complete: bool) -> Dict[str, object]:
+    return {
+        "run_key": summary.run_key,
+        "selected_profile_count": summary.selected_count,
+        "completed_profile_count": summary.completed_count,
+        "remaining_profile_count": summary.remaining_count,
+        "found_count": summary.found_count,
+        "no_candidate_count": summary.no_candidate_count,
+        "error_count": summary.error_count,
+        "complete": complete,
+    }
+
+
+def _run_transactional_search(
+    args: argparse.Namespace,
+    selected: Sequence[SearchProfile],
+) -> Tuple[List[Dict[str, object]], Dict[str, object], int]:
+    input_sha256 = geometry_checkpoint.sha256_file(args.input)
+    configuration = _checkpoint_configuration(args)
+    run_key, identity = geometry_checkpoint.build_run_identity(
+        input_path=args.input,
+        input_sha256=input_sha256,
+        selected_profiles=selected,
+        configuration=configuration,
+    )
+
+    interrupted = False
+    with geometry_checkpoint.GeometryCheckpoint(args.checkpoint) as checkpoint:
+        summary = checkpoint.prepare_run(
+            run_key=run_key,
+            identity=identity,
+            selected_count=len(selected),
+            fresh=args.fresh,
+        )
+        if args.retry_errors:
+            cleared_errors = checkpoint.clear_error_results(summary.run_id)
+            if cleared_errors:
+                print(f"Retry mode cleared {cleared_errors} prior error row(s).", flush=True)
+        completed_ids = checkpoint.completed_profile_ids(
+            summary.run_id, retry_errors=False
+        )
+        print(
+            f"Transactional geometry run {run_key[:12]}: "
+            f"{len(completed_ids)}/{len(selected)} profiles already durable in {args.checkpoint}",
+            flush=True,
+        )
+        if args.fresh:
+            print("Fresh mode cleared the matching checkpoint run.", flush=True)
+
+        try:
+            for ordinal, profile in enumerate(selected, start=1):
+                if profile.profile_id in completed_ids:
+                    continue
+                print(
+                    f"[geometry {ordinal}/{len(selected)}] profile {profile.profile_id}, "
+                    f"case {profile.case_id}: searching with {args.intermediate_points} "
+                    f"intermediate point(s) per variable...",
+                    flush=True,
+                )
+                try:
+                    candidate = search_profile(
+                        profile,
+                        intermediate_points=args.intermediate_points,
+                        attempts=max(1, args.attempts),
+                        max_iterations=max(1, args.max_iterations),
+                        population_size=max(2, args.population_size),
+                        seed=args.seed,
+                    )
+                except KeyboardInterrupt:
+                    raise
+                except Exception as exc:
+                    error_text = f"{type(exc).__name__}: {exc}"
+                    checkpoint.record_result(
+                        run_id=summary.run_id,
+                        profile_id=profile.profile_id,
+                        case_id=profile.case_id,
+                        ordinal=ordinal,
+                        status="error",
+                        error_text=error_text,
+                    )
+                    print(f"      error recorded transactionally: {error_text}", flush=True)
+                    continue
+
+                if candidate is None:
+                    checkpoint.record_result(
+                        run_id=summary.run_id,
+                        profile_id=profile.profile_id,
+                        case_id=profile.case_id,
+                        ordinal=ordinal,
+                        status="no_candidate",
+                    )
+                    print("      no candidate found; result checkpointed", flush=True)
+                else:
+                    checkpoint.record_result(
+                        run_id=summary.run_id,
+                        profile_id=profile.profile_id,
+                        case_id=profile.case_id,
+                        ordinal=ordinal,
+                        status="found",
+                        candidate=candidate.to_dict(),
+                    )
+                    print(
+                        f"      found and checkpointed: closure={candidate.closure_error:.3g}, "
+                        f"turn={candidate.turn_error:.3g}, area={candidate.signed_area:.3g}",
+                        flush=True,
+                    )
+        except KeyboardInterrupt:
+            interrupted = True
+            print(
+                "Geometry search interrupted. Every previously completed profile is durable; "
+                "the interrupted profile will be retried by the same command.",
+                flush=True,
+            )
+
+        summary = checkpoint.summary(summary.run_id, run_key, len(selected))
+        candidates = checkpoint.load_candidates(summary.run_id)
+        summary_data = _summary_dict(
+            summary, complete=(summary.remaining_count == 0 and not interrupted)
+        )
+        errors = checkpoint.error_records(summary.run_id)
+        if errors:
+            summary_data["errors"] = errors
+
+    exit_code = 130 if interrupted else 0
+    return candidates, summary_data, exit_code
 
 
 def main() -> int:
     args = build_parser().parse_args()
     if args.view_only:
         candidates = _load_candidate_file(args.output)
+        if not args.no_gui:
+            launch_viewer(candidates)
+        return 0
+
+    if not args.input.exists():
+        print(f"Missing survivor file: {args.input}", file=sys.stderr)
+        print("Run the audit first.", file=sys.stderr)
+        return 2
+    if args.intermediate_points < 0:
+        print("--intermediate-points must be nonnegative", file=sys.stderr)
+        return 2
+    if args.fresh and not args.resume:
+        print("--fresh requires transactional resume/checkpoint mode", file=sys.stderr)
+        return 2
+
+    profiles = load_survivors(args.input)
+    selected = select_profiles(profiles, max_profiles=args.max_profiles)
+    print(
+        f"Loaded {len(profiles)} surviving profiles from {args.input}; "
+        f"selected {len(selected)} for this run",
+        flush=True,
+    )
+
+    if args.resume:
+        candidates, search_summary, exit_code = _run_transactional_search(
+            args, selected
+        )
+        write_candidates(
+            args.output,
+            args.input,
+            candidates,
+            args.intermediate_points,
+            search_summary=search_summary,
+            checkpoint_path=args.checkpoint,
+        )
     else:
-        if not args.input.exists():
-            print(f"Missing survivor file: {args.input}", file=sys.stderr)
-            print("Run the audit first.", file=sys.stderr)
-            return 2
-        profiles = load_survivors(args.input)
-        print(f"Loaded {len(profiles)} surviving profiles from {args.input}")
-        if args.intermediate_points < 0:
-            print("--intermediate-points must be nonnegative", file=sys.stderr)
-            return 2
         found = search_profiles(
-            profiles,
-            max_profiles=args.max_profiles,
+            selected,
+            max_profiles=0,
             intermediate_points=args.intermediate_points,
             attempts=max(1, args.attempts),
             max_iterations=max(1, args.max_iterations),
             population_size=max(2, args.population_size),
             seed=args.seed,
         )
+        candidates = [candidate.to_dict() for candidate in found]
+        search_summary = {
+            "selected_profile_count": len(selected),
+            "completed_profile_count": len(selected),
+            "found_count": len(found),
+            "complete": True,
+            "checkpoint_disabled": True,
+        }
         write_candidates(
             args.output,
             args.input,
-            found,
+            candidates,
             args.intermediate_points,
+            search_summary=search_summary,
         )
-        print(f"Wrote {len(found)} candidates to {args.output}")
-        candidates = [candidate.to_dict() for candidate in found]
-    if not args.no_gui:
+        exit_code = 0
+
+    print(
+        f"Wrote {len(candidates)} candidates to {args.output}; "
+        f"completed {search_summary.get('completed_profile_count', 0)}/"
+        f"{search_summary.get('selected_profile_count', len(selected))}",
+        flush=True,
+    )
+    if not args.no_gui and candidates:
         launch_viewer(candidates)
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":

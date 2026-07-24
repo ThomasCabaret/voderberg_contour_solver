@@ -6,7 +6,9 @@ import settings
 def method_registry() -> Dict[str, Dict[str, object]]:
     return {
         "placement_enumerator": {"status": settings.STATUS_EXACT, "automatic_rejection_allowed": True, "description": "Finite exhaustive enumeration of pole-image placements and contact-imposed parities."},
-        "formal_word_solver": {"status": settings.STATUS_BOUNDED, "automatic_rejection_allowed": False, "description": "Every emitted terminal profile is checked, but the audit explores only configured depth/state bounds."},
+        "formal_word_solver": {"status": settings.STATUS_BOUNDED, "automatic_rejection_allowed": False, "description": "Every emitted terminal profile is checked, but the audit explores only configured depth/state bounds and may also apply an explicitly reported temporary cycle-unroll cap."},
+        "formal_cycle_unroll_cap": {"status": settings.STATUS_BOUNDED, "automatic_rejection_allowed": False, "description": "Independent anti-echo policy. It prunes a branch after repeated returns to the same residual system, reports every hit as truncation, and does not recognize parametric families."},
+        "decorated_solution_canonicalization": {"status": settings.STATUS_EXACT, "automatic_rejection_allowed": False, "description": "Canonical key for the terminal contour together with both copy mappings, modulo pole exchange, curve/angle renaming, copy permutation, and global mirror. It annotates but does not delete profiles."},
         "point_angle_solver": {"status": settings.STATUS_EXACT, "automatic_rejection_allowed": True, "description": "Exact signed angle classes and forced-zero point turns."},
         "total_turn_filter": {"status": settings.STATUS_EXACT, "automatic_rejection_allowed": True, "description": "Exact necessary total-turn feasibility test in the symbolic model."},
         "pole_angle_filter": {"status": settings.STATUS_EXACT, "automatic_rejection_allowed": True, "description": "Exact necessary simultaneous inequalities at P0 and P1."},
