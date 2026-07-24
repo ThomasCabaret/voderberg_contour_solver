@@ -1,0 +1,293 @@
+{
+  "case": {
+    "case_id": 1447,
+    "marker_loci": {
+      "A_start": "P1",
+      "A_end": "P0",
+      "B_start": "P1",
+      "B_end": "A"
+    },
+    "a_interior_blocks": [
+      [
+        "B_end"
+      ]
+    ],
+    "b_interior_blocks": [],
+    "marker_boundaries": {
+      "A_start": 2,
+      "A_end": 0,
+      "B_start": 2,
+      "B_end": 1
+    },
+    "a_direction": "reverse",
+    "b_direction": "reverse",
+    "a_word": "A0 A1",
+    "b_word": "B0",
+    "cycle_word": "A0 A1 B0",
+    "a_target": "A1^-1 A0^-1",
+    "b_target": "A1^-1",
+    "equations": [
+      "A0 A1 = A1^-1 A0^-1",
+      "B0 = A1^-1"
+    ]
+  },
+  "angle_convention": {
+    "turning_angle": "tau",
+    "straight": "tau = 0",
+    "reversal": "tau -> -tau",
+    "endpoint_policy": "mapped interval endpoints do not create full corner equations"
+  },
+  "terminal_solutions": [
+    {
+      "derivation": [
+        "equal_length",
+        "equal_length"
+      ],
+      "environment": {
+        "A0": "V0^-1",
+        "A1": "V0",
+        "B0": "V0^-1"
+      },
+      "A": "V0^-1 V0",
+      "B": "V0^-1",
+      "satisfies_original_equations": true,
+      "angles": {
+        "convention": {
+          "quantity": "signed turning angle",
+          "straight": "0",
+          "opposite_relation": "tau_left = -tau_right",
+          "regularity_assumption": "turning angles are represented in (-pi, pi); pi U-turns/cusps are excluded"
+        },
+        "equations": [
+          {
+            "left_point": "S[B_end]",
+            "right_point": "S[B_end]",
+            "sign": "opposite",
+            "projection": "A",
+            "boundary_index": 1,
+            "text": "turn(S[B_end]) =- turn(S[B_end])"
+          }
+        ],
+        "assignments": {
+          "S[B_end]": "0"
+        },
+        "zero_points": [
+          "S[B_end]"
+        ],
+        "parameter_count": 0
+      }
+    },
+    {
+      "derivation": [
+        "equal_length",
+        "left_strictly_shorter",
+        "involutive_palindrome"
+      ],
+      "environment": {
+        "A0": "V0",
+        "A1": "V1 V1^-1 V0^-1",
+        "B0": "V0 V1 V1^-1"
+      },
+      "A": "V0 V1 V1^-1 V0^-1",
+      "B": "V0 V1 V1^-1",
+      "satisfies_original_equations": true,
+      "angles": {
+        "convention": {
+          "quantity": "signed turning angle",
+          "straight": "0",
+          "opposite_relation": "tau_left = -tau_right",
+          "regularity_assumption": "turning angles are represented in (-pi, pi); pi U-turns/cusps are excluded"
+        },
+        "equations": [
+          {
+            "left_point": "S[B_end]",
+            "right_point": "J[A1:2]",
+            "sign": "opposite",
+            "projection": "A",
+            "boundary_index": 1,
+            "text": "turn(S[B_end]) =- turn(J[A1:2])"
+          },
+          {
+            "left_point": "J[A1:1]",
+            "right_point": "J[A1:1]",
+            "sign": "opposite",
+            "projection": "A",
+            "boundary_index": 2,
+            "text": "turn(J[A1:1]) =- turn(J[A1:1])"
+          },
+          {
+            "left_point": "J[A1:2]",
+            "right_point": "S[B_end]",
+            "sign": "opposite",
+            "projection": "A",
+            "boundary_index": 3,
+            "text": "turn(J[A1:2]) =- turn(S[B_end])"
+          },
+          {
+            "left_point": "J[B0:1]",
+            "right_point": "J[A1:2]",
+            "sign": "opposite",
+            "projection": "B",
+            "boundary_index": 1,
+            "text": "turn(J[B0:1]) =- turn(J[A1:2])"
+          },
+          {
+            "left_point": "J[B0:2]",
+            "right_point": "J[A1:1]",
+            "sign": "opposite",
+            "projection": "B",
+            "boundary_index": 2,
+            "text": "turn(J[B0:2]) =- turn(J[A1:1])"
+          }
+        ],
+        "assignments": {
+          "J[A1:1]": "0",
+          "J[A1:2]": "Theta0",
+          "J[B0:1]": "-Theta0",
+          "J[B0:2]": "0",
+          "S[B_end]": "-Theta0"
+        },
+        "zero_points": [
+          "J[A1:1]",
+          "J[B0:2]"
+        ],
+        "parameter_count": 1
+      }
+    },
+    {
+      "derivation": [
+        "equal_length",
+        "right_strictly_shorter",
+        "involutive_palindrome"
+      ],
+      "environment": {
+        "A0": "V0^-1 V1 V1^-1",
+        "A1": "V0",
+        "B0": "V0^-1"
+      },
+      "A": "V0^-1 V1 V1^-1 V0",
+      "B": "V0^-1",
+      "satisfies_original_equations": true,
+      "angles": {
+        "convention": {
+          "quantity": "signed turning angle",
+          "straight": "0",
+          "opposite_relation": "tau_left = -tau_right",
+          "regularity_assumption": "turning angles are represented in (-pi, pi); pi U-turns/cusps are excluded"
+        },
+        "equations": [
+          {
+            "left_point": "J[A0:1]",
+            "right_point": "S[B_end]",
+            "sign": "opposite",
+            "projection": "A",
+            "boundary_index": 1,
+            "text": "turn(J[A0:1]) =- turn(S[B_end])"
+          },
+          {
+            "left_point": "J[A0:2]",
+            "right_point": "J[A0:2]",
+            "sign": "opposite",
+            "projection": "A",
+            "boundary_index": 2,
+            "text": "turn(J[A0:2]) =- turn(J[A0:2])"
+          },
+          {
+            "left_point": "S[B_end]",
+            "right_point": "J[A0:1]",
+            "sign": "opposite",
+            "projection": "A",
+            "boundary_index": 3,
+            "text": "turn(S[B_end]) =- turn(J[A0:1])"
+          }
+        ],
+        "assignments": {
+          "J[A0:1]": "Theta0",
+          "J[A0:2]": "0",
+          "S[B_end]": "-Theta0"
+        },
+        "zero_points": [
+          "J[A0:2]"
+        ],
+        "parameter_count": 1
+      }
+    }
+  ],
+  "exact_voderberg_profile": {
+    "derivation": [
+      "equal_length",
+      "left_strictly_shorter",
+      "involutive_palindrome"
+    ],
+    "environment": {
+      "A0": "V0",
+      "A1": "V1 V1^-1 V0^-1",
+      "B0": "V0 V1 V1^-1"
+    },
+    "A": "V0 V1 V1^-1 V0^-1",
+    "B": "V0 V1 V1^-1",
+    "satisfies_original_equations": true,
+    "angles": {
+      "convention": {
+        "quantity": "signed turning angle",
+        "straight": "0",
+        "opposite_relation": "tau_left = -tau_right",
+        "regularity_assumption": "turning angles are represented in (-pi, pi); pi U-turns/cusps are excluded"
+      },
+      "equations": [
+        {
+          "left_point": "S[B_end]",
+          "right_point": "J[A1:2]",
+          "sign": "opposite",
+          "projection": "A",
+          "boundary_index": 1,
+          "text": "turn(S[B_end]) =- turn(J[A1:2])"
+        },
+        {
+          "left_point": "J[A1:1]",
+          "right_point": "J[A1:1]",
+          "sign": "opposite",
+          "projection": "A",
+          "boundary_index": 2,
+          "text": "turn(J[A1:1]) =- turn(J[A1:1])"
+        },
+        {
+          "left_point": "J[A1:2]",
+          "right_point": "S[B_end]",
+          "sign": "opposite",
+          "projection": "A",
+          "boundary_index": 3,
+          "text": "turn(J[A1:2]) =- turn(S[B_end])"
+        },
+        {
+          "left_point": "J[B0:1]",
+          "right_point": "J[A1:2]",
+          "sign": "opposite",
+          "projection": "B",
+          "boundary_index": 1,
+          "text": "turn(J[B0:1]) =- turn(J[A1:2])"
+        },
+        {
+          "left_point": "J[B0:2]",
+          "right_point": "J[A1:1]",
+          "sign": "opposite",
+          "projection": "B",
+          "boundary_index": 2,
+          "text": "turn(J[B0:2]) =- turn(J[A1:1])"
+        }
+      ],
+      "assignments": {
+        "J[A1:1]": "0",
+        "J[A1:2]": "Theta0",
+        "J[B0:1]": "-Theta0",
+        "J[B0:2]": "0",
+        "S[B_end]": "-Theta0"
+      },
+      "zero_points": [
+        "J[A1:1]",
+        "J[B0:2]"
+      ],
+      "parameter_count": 1
+    }
+  }
+}

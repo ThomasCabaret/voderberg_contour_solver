@@ -1,0 +1,11 @@
+{
+  "metadata": {
+    "source_survivors": "geometric_filter_survivors.json",
+    "candidate_count": 0,
+    "intermediate_points_per_variable": 3,
+    "edges_per_variable": 4,
+    "method": "heuristic configurable polyline templates with differential evolution",
+    "proof_status": "found candidates are concrete for the configured polygonal model; failures are inconclusive"
+  },
+  "candidates": []
+}

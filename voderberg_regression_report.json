@@ -1,0 +1,96 @@
+{
+  "case": {
+    "case_id": 1410,
+    "marker_loci": {
+      "A_start": "P1",
+      "A_end": "P0",
+      "B_start": "P0",
+      "B_end": "A"
+    },
+    "a_interior_blocks": [
+      [
+        "B_end"
+      ]
+    ],
+    "b_interior_blocks": [],
+    "marker_boundaries": {
+      "A_start": 2,
+      "A_end": 0,
+      "B_start": 0,
+      "B_end": 1
+    },
+    "a_direction": "reverse",
+    "b_direction": "forward",
+    "a_word": "A0 A1",
+    "b_word": "B0",
+    "cycle_word": "A0 A1 B0",
+    "a_target": "A1^-1 A0^-1",
+    "b_target": "A0",
+    "equations": [
+      "A0 A1 = A1^-1 A0^-1",
+      "B0 = A0"
+    ]
+  },
+  "terminal_state_count": 3,
+  "all_terminal_states_satisfy_original_equations": true,
+  "schemes": [
+    {
+      "case_id": 1410,
+      "depth": 2,
+      "A": "X0^-1 X0",
+      "B": "X0^-1",
+      "contour": "P0 X0^-1 X0 P1 X0^-1",
+      "parameters": [
+        "X0"
+      ],
+      "derivation": [
+        "equal_length",
+        "equal_length"
+      ]
+    },
+    {
+      "case_id": 1410,
+      "depth": 3,
+      "A": "X0 X1 X1^-1 X0^-1",
+      "B": "X0",
+      "contour": "P0 X0 X1 X1^-1 X0^-1 P1 X0",
+      "parameters": [
+        "X0",
+        "X1"
+      ],
+      "derivation": [
+        "equal_length",
+        "left_strictly_shorter",
+        "involutive_palindrome"
+      ]
+    },
+    {
+      "case_id": 1410,
+      "depth": 3,
+      "A": "X0^-1 X1 X1^-1 X0",
+      "B": "X0^-1 X1 X1^-1",
+      "contour": "P0 X0^-1 X1 X1^-1 X0 P1 X0^-1 X1 X1^-1",
+      "parameters": [
+        "X0",
+        "X1"
+      ],
+      "derivation": [
+        "equal_length",
+        "right_strictly_shorter",
+        "involutive_palindrome"
+      ]
+    }
+  ],
+  "graph_summary": {
+    "case_id": 1410,
+    "complete": true,
+    "truncation_reason": null,
+    "node_count": 4,
+    "edge_count": 5,
+    "terminal_nodes": [
+      2
+    ],
+    "cyclic_edge_count": 0,
+    "cyclic_edges": []
+  }
+}

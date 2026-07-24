@@ -1,0 +1,96 @@
+{
+  "project": "Voderberg contour solver - integrated joint-boundary release",
+  "validation": {
+    "python_compileall": "passed",
+    "unit_tests_passed": 56,
+    "web_health": {
+      "status": "ok",
+      "schema": "formal-profile-v2",
+      "profiles": 1078
+    },
+    "voderberg_profile_occurrences": 1,
+    "voderberg_core_retained": true,
+    "voderberg_experimental_rejected": false
+  },
+  "core_counts": {
+    "formal_terminal_profile_instances": 1078,
+    "rejected_by_angular_filters_under_placement_parity": 760,
+    "additionally_rejected_by_translation_holonomy": 11,
+    "remaining_after_all_current_filters": 307,
+    "would_be_pruned_at_placement_if_reflections_disabled": 862
+  },
+  "experimental_counts": {
+    "profiles_examined": 1078,
+    "external_boundary_build_errors": 0,
+    "exact_joint_rotation_rejections": 922,
+    "exact_elementary_joint_translation_rejections": 61,
+    "exact_encoded_model_rejections_total": 928,
+    "additional_exact_rejections_among_core_survivors": 257,
+    "core_survivors_after_experimental_exact_rejections": 50,
+    "dreal_problems_generated_for_core_survivors": 50,
+    "dreal_encoding_unsupported": 0,
+    "dreal_encoding_errors": 0,
+    "dreal_runs": 0,
+    "dreal_exact_unsat": 0,
+    "dreal_delta_sat_candidates": 0,
+    "dreal_timeouts": 0,
+    "dreal_not_found": 0,
+    "dreal_solver_errors_or_unknown": 0
+  },
+  "method_status": {
+    "placement_enumerator": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "Finite exhaustive enumeration of pole-image placements and contact-imposed parities."
+    },
+    "formal_word_solver": {
+      "status": "bounded_incomplete_enumeration",
+      "automatic_rejection_allowed": false,
+      "description": "Every emitted terminal profile is checked, but the audit explores only configured depth/state bounds."
+    },
+    "point_angle_solver": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "Exact signed angle classes and forced-zero point turns."
+    },
+    "total_turn_filter": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "Exact necessary total-turn feasibility test in the symbolic model."
+    },
+    "pole_angle_filter": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "Exact necessary simultaneous inequalities at P0 and P1."
+    },
+    "translation_holonomy_filter": {
+      "status": "sound_rejection_incomplete_coverage",
+      "automatic_rejection_allowed": true,
+      "description": "Rejects only formally proved chord-closure contradictions; undecided systems are retained."
+    },
+    "forced_point_coincidence": {
+      "status": "sound_rejection_incomplete_coverage",
+      "automatic_rejection_allowed": false,
+      "description": "Standalone prototype, not integrated into core status."
+    },
+    "external_boundary_builder": {
+      "status": "experimental_not_in_core_rejection_pipeline",
+      "automatic_rejection_allowed": false,
+      "description": "Constructs the shared inner/outer boundary system and exact linear turn constraints as a separate report layer."
+    },
+    "joint_translation_dreal": {
+      "status": "delta_complete_external_backend",
+      "automatic_rejection_allowed": true,
+      "description": "For the encoded model, dReal UNSAT is a sound discard; delta-sat is only a candidate and the model is not yet the complete rigid-tile realization problem."
+    }
+  },
+  "configuration_source": "settings.py",
+  "windows_launchers_pause_before_closing": true,
+  "dreal_executed_in_shipped_audit": false,
+  "notes": [
+    "Core retained/rejected status is unchanged by the experimental layer.",
+    "Experimental exact contradictions are reported separately.",
+    "dReal UNSAT is sound for the encoded model; delta-sat is only a candidate.",
+    "The formal word audit is bounded by max depth and max states."
+  ]
+}

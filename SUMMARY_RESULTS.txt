@@ -1,0 +1,4 @@
+Raw symbolic marker order types: 932
+Order types with at least one nonzero orientation: 704
+Nonzero oriented placement cases: 2816
+Direct-copy-only placement cases: 704

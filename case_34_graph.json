@@ -1,0 +1,369 @@
+{
+  "case_id": 34,
+  "root": 0,
+  "complete": true,
+  "truncation_reason": null,
+  "initial_A": "V3 V1 V2",
+  "initial_B": "V0",
+  "nodes": [
+    {
+      "node_id": 0,
+      "terminal": false,
+      "equations": [
+        "V0 = V1",
+        "V0^-1 V2^-1 V1^-1 = V3 V1 V2"
+      ]
+    },
+    {
+      "node_id": 1,
+      "terminal": false,
+      "equations": [
+        "V0 V1 V2 = V1^-1 V2^-1 V1^-1"
+      ]
+    },
+    {
+      "node_id": 2,
+      "terminal": false,
+      "equations": [
+        "V0 V1 = V1^-1 V0^-1"
+      ]
+    },
+    {
+      "node_id": 3,
+      "terminal": false,
+      "equations": [
+        "V0 V1^-1 V2 V0 = V0^-1 V2^-1 V1"
+      ]
+    },
+    {
+      "node_id": 4,
+      "terminal": false,
+      "equations": [
+        "V0 V1 V2 = V2^-1 V1^-1"
+      ]
+    },
+    {
+      "node_id": 5,
+      "terminal": true,
+      "equations": []
+    },
+    {
+      "node_id": 6,
+      "terminal": false,
+      "equations": [
+        "V0 = V0^-1"
+      ]
+    },
+    {
+      "node_id": 7,
+      "terminal": false,
+      "equations": [
+        "V0^-1 V1 = V1^-1 V0 V2 V2^-1"
+      ]
+    },
+    {
+      "node_id": 8,
+      "terminal": false,
+      "equations": [
+        "V0 V1 = V0^-1"
+      ]
+    },
+    {
+      "node_id": 9,
+      "terminal": false,
+      "equations": [
+        "V0 V1^-1 = V1 V0^-1 V2^-1"
+      ]
+    },
+    {
+      "node_id": 10,
+      "terminal": false,
+      "equations": [
+        "V0 V1 V2 = V1^-1"
+      ]
+    },
+    {
+      "node_id": 11,
+      "terminal": false,
+      "equations": [
+        "V0 V1 V2 V2^-1 = V0^-1 V1"
+      ]
+    },
+    {
+      "node_id": 12,
+      "terminal": false,
+      "equations": [
+        "V0 V1 = V0^-1 V1 V2 V2^-1"
+      ]
+    },
+    {
+      "node_id": 13,
+      "terminal": false,
+      "equations": [
+        "V0 V1^-1 V2^-1 = V0^-1 V1^-1"
+      ]
+    },
+    {
+      "node_id": 14,
+      "terminal": false,
+      "equations": [
+        "V0 V1^-1 = V0^-1 V1^-1 V2^-1"
+      ]
+    },
+    {
+      "node_id": 15,
+      "terminal": false,
+      "equations": [
+        "V0 = V0^-1 V1^-1 V2"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": 0,
+      "source": 0,
+      "target": 1,
+      "branch": "same_cut",
+      "morphism": {
+        "V0": "V1",
+        "V1": "V1",
+        "V2": "V2",
+        "V3": "V0"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 1,
+      "source": 1,
+      "target": 2,
+      "branch": "same_cut",
+      "morphism": {
+        "V0": "V0^-1",
+        "V1": "V0",
+        "V2": "V1"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 2,
+      "source": 1,
+      "target": 3,
+      "branch": "left_cut_before_right_cut",
+      "morphism": {
+        "V0": "V2",
+        "V1": "V0^-1 V2^-1",
+        "V2": "V1"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 3,
+      "source": 1,
+      "target": 4,
+      "branch": "right_cut_before_left_cut",
+      "morphism": {
+        "V0": "V1^-1 V0",
+        "V1": "V1",
+        "V2": "V2"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 4,
+      "source": 2,
+      "target": 5,
+      "branch": "same_cut",
+      "morphism": {
+        "V0": "K0^-1",
+        "V1": "K0"
+      },
+      "local_parameters": [
+        "K0"
+      ],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 5,
+      "source": 2,
+      "target": 6,
+      "branch": "left_cut_before_right_cut",
+      "morphism": {
+        "V0": "K0",
+        "V1": "V0^-1 K0^-1"
+      },
+      "local_parameters": [
+        "K0"
+      ],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 6,
+      "source": 2,
+      "target": 6,
+      "branch": "right_cut_before_left_cut",
+      "morphism": {
+        "V0": "K0^-1 V0",
+        "V1": "K0"
+      },
+      "local_parameters": [
+        "K0"
+      ],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 7,
+      "source": 3,
+      "target": 7,
+      "branch": "involutive_fixed_word",
+      "morphism": {
+        "V0": "V2 V2^-1",
+        "V1": "V1",
+        "V2": "V0"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 8,
+      "source": 4,
+      "target": 8,
+      "branch": "same_cut",
+      "morphism": {
+        "V0": "V1^-1",
+        "V1": "V0",
+        "V2": "V1"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 9,
+      "source": 4,
+      "target": 9,
+      "branch": "left_cut_before_right_cut",
+      "morphism": {
+        "V0": "V2",
+        "V1": "V1",
+        "V2": "V0^-1 V2^-1"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 10,
+      "source": 4,
+      "target": 10,
+      "branch": "right_cut_before_left_cut",
+      "morphism": {
+        "V0": "V2^-1 V0",
+        "V1": "V1",
+        "V2": "V2"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 11,
+      "source": 6,
+      "target": 5,
+      "branch": "involutive_fixed_word",
+      "morphism": {
+        "V0": "K0 K0^-1"
+      },
+      "local_parameters": [
+        "K0"
+      ],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 12,
+      "source": 7,
+      "target": 11,
+      "branch": "left_cut_before_right_cut",
+      "morphism": {
+        "V0": "V1",
+        "V1": "V0^-1 V1",
+        "V2": "V2"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 13,
+      "source": 7,
+      "target": 12,
+      "branch": "right_cut_before_left_cut",
+      "morphism": {
+        "V0": "V0^-1 V1",
+        "V1": "V1",
+        "V2": "V2"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 14,
+      "source": 9,
+      "target": 13,
+      "branch": "left_cut_before_right_cut",
+      "morphism": {
+        "V0": "V1",
+        "V1": "V1 V0",
+        "V2": "V2"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 15,
+      "source": 9,
+      "target": 14,
+      "branch": "right_cut_before_left_cut",
+      "morphism": {
+        "V0": "V1 V0",
+        "V1": "V1",
+        "V2": "V2"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 16,
+      "source": 10,
+      "target": 15,
+      "branch": "left_cut_before_right_cut",
+      "morphism": {
+        "V0": "V1",
+        "V1": "V0^-1 V1^-1",
+        "V2": "V2"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    }
+  ],
+  "semantics": {
+    "path": "Compose edge morphisms from root to a terminal node.",
+    "cycle": "A directed cycle may be traversed an arbitrary number n >= 0 of times; edge-local K variables are fresh on each traversal."
+  }
+}

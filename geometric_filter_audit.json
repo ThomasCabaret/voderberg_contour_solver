@@ -1,0 +1,205 @@
+{
+  "scope": {
+    "placement_cases_with_reflections_allowed": 2816,
+    "placement_cases_direct_copies_only": 704,
+    "cases_with_at_least_one_terminal_profile_in_bound": 632,
+    "max_solver_depth_per_case": 20,
+    "max_solver_states_per_case": 10000,
+    "exhaustiveness": "bounded formal-word enumeration; geometric filters are necessary-condition filters"
+  },
+  "method_status": {
+    "placement_enumerator": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "Finite exhaustive enumeration of pole-image placements and contact-imposed parities."
+    },
+    "formal_word_solver": {
+      "status": "bounded_incomplete_enumeration",
+      "automatic_rejection_allowed": false,
+      "description": "Every emitted terminal profile is checked, but the audit explores only configured depth/state bounds."
+    },
+    "point_angle_solver": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "Exact signed angle classes and forced-zero point turns."
+    },
+    "total_turn_filter": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "Exact necessary total-turn feasibility test in the symbolic model."
+    },
+    "pole_angle_filter": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "Exact necessary simultaneous inequalities at P0 and P1."
+    },
+    "translation_holonomy_filter": {
+      "status": "sound_rejection_incomplete_coverage",
+      "automatic_rejection_allowed": true,
+      "description": "Rejects only formally proved chord-closure contradictions; undecided systems are retained."
+    },
+    "forced_point_coincidence": {
+      "status": "sound_rejection_incomplete_coverage",
+      "automatic_rejection_allowed": false,
+      "description": "Standalone prototype, not integrated into core status."
+    },
+    "external_boundary_builder": {
+      "status": "experimental_not_in_core_rejection_pipeline",
+      "automatic_rejection_allowed": false,
+      "description": "Constructs the shared inner/outer boundary system and exact linear turn constraints as a separate report layer."
+    },
+    "joint_translation_z3": {
+      "status": "sound_rejection_incomplete_coverage",
+      "automatic_rejection_allowed": true,
+      "description": "Z3/NLSAT solves a polynomial relaxation. UNSAT is an exact discard for the encoded necessary conditions; SAT is only a candidate and the complete rigid-tile realization problem is not yet encoded."
+    }
+  },
+  "formal_equation_audit_summary": {
+    "placement_system_count": 2816,
+    "quadratic_system_count": 608,
+    "nonquadratic_system_count": 2208,
+    "contains_involution_case_count": 2112,
+    "at_most_once_per_equation_side_case_count": 2816,
+    "initially_inconsistent_case_count": 544,
+    "submitted_to_branching_solver_case_count": 2272,
+    "cases_with_terminal_profiles_within_bounds": 632,
+    "cases_without_terminal_profiles_within_bounds": 2184,
+    "search_outcome_counts": {
+      "exhausted_with_terminal_profiles": 214,
+      "exhausted_without_terminal_profiles": 817,
+      "initially_inconsistent": 544,
+      "truncated_with_terminal_profiles": 418,
+      "truncated_without_terminal_profiles": 823
+    },
+    "search_outcome_counts_by_occurrence_class": {
+      "cubic": {
+        "exhausted_with_terminal_profiles": 192,
+        "exhausted_without_terminal_profiles": 594,
+        "initially_inconsistent": 428,
+        "truncated_with_terminal_profiles": 400,
+        "truncated_without_terminal_profiles": 594
+      },
+      "quadratic": {
+        "exhausted_with_terminal_profiles": 22,
+        "exhausted_without_terminal_profiles": 223,
+        "initially_inconsistent": 116,
+        "truncated_with_terminal_profiles": 18,
+        "truncated_without_terminal_profiles": 229
+      }
+    },
+    "truncated_with_terminal_profiles_case_count": 418,
+    "truncated_without_terminal_profiles_case_count": 823,
+    "exhausted_with_terminal_profiles_case_count": 214,
+    "exhausted_without_terminal_profiles_case_count": 817,
+    "terminal_profile_sets_complete_within_current_graph_case_count": 214,
+    "terminal_profile_sets_potentially_incomplete_due_to_bounds_case_count": 418,
+    "solution_existence_unresolved_due_to_bounds_case_count": 823,
+    "no_terminal_after_exhausting_current_graph_case_count": 817,
+    "occurrence_class_counts": {
+      "cubic": 2208,
+      "quadratic": 608
+    },
+    "variable_count_histogram": {
+      "2": 16,
+      "3": 256,
+      "4": 912,
+      "5": 1152,
+      "6": 480
+    },
+    "maximum_occurrence_histogram": {
+      "2": 608,
+      "3": 2208
+    },
+    "recommended_solver_family_counts": {
+      "general_recompression_or_specialized_cycle_compression": 2208,
+      "quadratic_nielsen_graph_candidate": 608
+    },
+    "cases_with_terminal_profiles_by_occurrence_class": {
+      "cubic": 592,
+      "quadratic": 40
+    },
+    "terminal_profile_instances_by_occurrence_class": {
+      "cubic": 106402,
+      "quadratic": 29016
+    },
+    "bounded_search_truncated_case_count": 1241,
+    "bounded_search_state_limited_case_count": 322,
+    "bounded_search_depth_limited_case_count": 939,
+    "bounded_search_exhausted_case_count": 1031,
+    "truncated_case_count_by_occurrence_class": {
+      "cubic": 994,
+      "quadratic": 247
+    },
+    "interpretation": {
+      "quadratic": "Every initial variable occurs at most twice across all equation sides.",
+      "search_exhausted": "The current transition-system exploration emptied its queue without hitting either configured bound.",
+      "search_truncated_with_terminals": "At least one terminal profile was found, but more terminal profiles may exist beyond the configured bounds.",
+      "search_truncated_without_terminals": "No terminal profile was found, and existence remains unresolved because a configured bound was hit.",
+      "exhausted_without_terminals": "No terminal profile is reachable in the explored transition graph. This is not a general completeness theorem for arbitrary word equations.",
+      "method_selection": "Try a complete quadratic Nielsen-graph solver for quadratic systems before implementing general recompression."
+    }
+  },
+  "physical_pipeline_counts": {
+    "formal_terminal_profile_instances": 135418,
+    "rejected_by_angular_filters_under_placement_parity": 91852,
+    "additionally_rejected_by_translation_holonomy": 34,
+    "remaining_after_all_current_filters": 43532,
+    "would_be_pruned_at_placement_if_reflections_disabled": 130176
+  },
+  "comparative_parity_impact_counts": {
+    "rejected_by_angular_filters_for_all_four_parity_choices": 3,
+    "rejected_by_SE2_filters_for_all_four_parity_choices": 3,
+    "additionally_rejected_by_placement_time_contact_parity": 91883
+  },
+  "experimental_pipeline_counts": {
+    "profiles_examined": 43532,
+    "external_boundary_build_errors": 0,
+    "exact_joint_rotation_rejections": 35796,
+    "exact_elementary_joint_translation_rejections": 0,
+    "exact_inner_forced_point_coincidence_rejections": 0,
+    "exact_outer_forced_point_coincidence_rejections": 0,
+    "exact_forced_point_coincidence_rejections_total": 0,
+    "forced_point_filter_errors": 0,
+    "exact_encoded_model_rejections_total": 35796,
+    "additional_exact_rejections_among_core_survivors": 35796,
+    "core_survivors_after_experimental_exact_rejections": 7736,
+    "z3_problems_generated_for_core_survivors": 7736,
+    "z3_encoding_unsupported": 0,
+    "z3_encoding_errors": 0,
+    "z3_checks_requested": 0,
+    "z3_solver_invocations": 0,
+    "z3_exact_unsat": 0,
+    "z3_sat_candidates": 0,
+    "z3_timeouts": 0,
+    "z3_not_installed": 0,
+    "z3_solver_errors_or_unknown": 0,
+    "final_survivors_after_z3_unsat_rejections": 7736
+  },
+  "placement_contact_parity_counts": {
+    "DD": 5242,
+    "DR": 24396,
+    "RD": 24396,
+    "RR": 81384
+  },
+  "pipeline_sequence": [
+    "placement generation and contact parity",
+    "formal equation structure audit",
+    "bounded formal word solving with truncation diagnostics",
+    "point-angle class resolution",
+    "prototype total-turn filter",
+    "two-pole angle filter",
+    "prototype translation-holonomy obstruction",
+    "optional parity diagnostics",
+    "shared inner/outer boundary construction",
+    "joint rotation filter",
+    "elementary joint translation filter",
+    "forced point coincidence filter",
+    "optional Z3/NLSAT polynomial filter"
+  ],
+  "interpretation": {
+    "z3_unsat": "Exact for the polynomial relaxation and safe for rejection.",
+    "z3_sat_or_timeout": "Not a realizability proof; the profile remains a candidate.",
+    "survivor_file": "geometric_filter_survivors.json",
+    "formal_equation_audit_file": "formal_equation_audit.json"
+  }
+}

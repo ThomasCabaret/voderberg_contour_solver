@@ -1,0 +1,13 @@
+{
+  "formal_terminal_profile_instances": 1078,
+  "rejected_by_angular_filters_under_placement_parity": 760,
+  "additionally_rejected_by_translation_holonomy": 11,
+  "remaining_after_all_current_filters": 307,
+  "would_be_pruned_at_placement_if_reflections_disabled": 862
+}
+{
+  "rejected_by_angular_filters_for_all_four_parity_choices": 3,
+  "rejected_by_SE2_filters_for_all_four_parity_choices": 3,
+  "additionally_rejected_by_placement_time_contact_parity": 768
+}
+Wrote: geometric_filter_audit.json

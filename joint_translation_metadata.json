@@ -1,0 +1,44 @@
+{
+  "case_id": 1447,
+  "problem": {
+    "rotation_reduction": {
+      "feasible": true,
+      "reason": null,
+      "substitutions": {
+        "KappaClass0": "Theta0 - Theta1 - Theta2 + 2*pi",
+        "Theta0": "Theta0",
+        "Theta1": "Theta1",
+        "Theta2": "Theta2"
+      },
+      "free_theta": [
+        "Theta0",
+        "Theta1",
+        "Theta2"
+      ],
+      "free_kappa": [],
+      "theta_forms": {
+        "Theta0": "Theta0",
+        "Theta1": "Theta1",
+        "Theta2": "Theta2"
+      },
+      "bounded_kappa_representatives_are_sound": true
+    },
+    "angle_symbol_map": {
+      "Theta0": "angle_0",
+      "Theta1": "angle_1",
+      "Theta2": "angle_2"
+    },
+    "chord_symbol_map": {
+      "V0": {
+        "x": "dx_0",
+        "y": "dy_0"
+      },
+      "V1": {
+        "x": "dx_1",
+        "y": "dy_1"
+      }
+    },
+    "translation_equation_count": 4,
+    "require_all_chords_nonzero": true
+  }
+}

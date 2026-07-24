@@ -1,0 +1,69 @@
+{
+  "case_id": null,
+  "root": 0,
+  "complete": true,
+  "truncation_reason": null,
+  "initial_A": "V0",
+  "initial_B": "V1",
+  "nodes": [
+    {
+      "node_id": 0,
+      "terminal": false,
+      "equations": [
+        "V0 V1 = V1 V0"
+      ]
+    },
+    {
+      "node_id": 1,
+      "terminal": true,
+      "equations": []
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": 0,
+      "source": 0,
+      "target": 1,
+      "branch": "same_cut",
+      "morphism": {
+        "V0": "K0",
+        "V1": "K0"
+      },
+      "local_parameters": [
+        "K0"
+      ],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": false
+    },
+    {
+      "edge_id": 1,
+      "source": 0,
+      "target": 0,
+      "branch": "left_cut_before_right_cut",
+      "morphism": {
+        "V0": "V0",
+        "V1": "V0 V1"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": true
+    },
+    {
+      "edge_id": 2,
+      "source": 0,
+      "target": 0,
+      "branch": "right_cut_before_left_cut",
+      "morphism": {
+        "V0": "V1 V0",
+        "V1": "V1"
+      },
+      "local_parameters": [],
+      "iteration": "n >= 0 when this edge belongs to a directed cycle",
+      "cyclic": true
+    }
+  ],
+  "semantics": {
+    "path": "Compose edge morphisms from root to a terminal node.",
+    "cycle": "A directed cycle may be traversed an arbitrary number n >= 0 of times; edge-local K variables are fresh on each traversal."
+  }
+}

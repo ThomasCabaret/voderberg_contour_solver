@@ -1,0 +1,12 @@
+Delete these obsolete dReal files after applying the patch:
+
+joint_translation_dreal.py
+test_joint_translation_dreal.py
+JOINT_TRANSLATION_DREAL_NOTES.md
+run_dreal_voderberg.cmd
+run_dreal_voderberg.ps1
+joint_translation_problem.smt2
+joint_translation_metadata.json
+joint_translation_dreal_audit.json
+voderberg_joint_translation.smt2
+voderberg_joint_translation_metadata.json

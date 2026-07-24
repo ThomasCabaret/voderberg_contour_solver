@@ -1,0 +1,223 @@
+{
+  "case": {
+    "case_id": 1447,
+    "marker_loci": {
+      "A_start": "P1",
+      "A_end": "P0",
+      "B_start": "P1",
+      "B_end": "A"
+    },
+    "a_interior_blocks": [
+      [
+        "B_end"
+      ]
+    ],
+    "b_interior_blocks": [],
+    "marker_boundaries": {
+      "A_start": 2,
+      "A_end": 0,
+      "B_start": 2,
+      "B_end": 1
+    },
+    "a_direction": "reverse",
+    "b_direction": "reverse",
+    "a_word": "A0 A1",
+    "b_word": "B0",
+    "cycle_word": "A0 A1 B0",
+    "a_target": "A1^-1 A0^-1",
+    "b_target": "A1^-1",
+    "equations": [
+      "A0 A1 = A1^-1 A0^-1",
+      "B0 = A1^-1"
+    ]
+  },
+  "terminal_profiles": [
+    {
+      "derivation": [
+        "equal_length",
+        "equal_length"
+      ],
+      "A": "V0^-1 V0",
+      "B": "V0^-1",
+      "angle_assignments": {
+        "P0": "Theta0",
+        "P1": "Theta1",
+        "S[B_end]": "0"
+      },
+      "pole_angle_analysis": {
+        "convention": {
+          "prototype_orientation": "counterclockwise",
+          "signed_turn": "tau",
+          "interior_angle": "alpha = pi - tau",
+          "regular_turn_domain": "tau in (-pi, pi)",
+          "pole_condition": "sum of the three physical interior angles <= 2*pi"
+        },
+        "constraints": [
+          {
+            "pole": "P0",
+            "contact_points": [
+              "P0",
+              "P1",
+              "S[B_end]"
+            ],
+            "turn_coefficients": {
+              "Theta0": 1,
+              "Theta1": 1
+            },
+            "individual_capacity_pi_units": 2,
+            "inequality": "Theta0 + Theta1 >= pi"
+          },
+          {
+            "pole": "P1",
+            "contact_points": [
+              "P1",
+              "P0",
+              "P1"
+            ],
+            "turn_coefficients": {
+              "Theta0": 1,
+              "Theta1": 2
+            },
+            "individual_capacity_pi_units": 3,
+            "inequality": "Theta0 + 2*Theta1 >= pi"
+          }
+        ],
+        "joint_capacity_pi_units": {
+          "numerator": 2,
+          "denominator": 1,
+          "decimal": 2.0
+        },
+        "feasible": true,
+        "discard_reason": null
+      }
+    },
+    {
+      "derivation": [
+        "equal_length",
+        "left_strictly_shorter",
+        "involutive_palindrome"
+      ],
+      "A": "V0 V1 V1^-1 V0^-1",
+      "B": "V0 V1 V1^-1",
+      "angle_assignments": {
+        "J[A1:1]": "0",
+        "J[A1:2]": "Theta0",
+        "J[B0:1]": "-Theta0",
+        "J[B0:2]": "0",
+        "P0": "Theta1",
+        "P1": "Theta2",
+        "S[B_end]": "-Theta0"
+      },
+      "pole_angle_analysis": {
+        "convention": {
+          "prototype_orientation": "counterclockwise",
+          "signed_turn": "tau",
+          "interior_angle": "alpha = pi - tau",
+          "regular_turn_domain": "tau in (-pi, pi)",
+          "pole_condition": "sum of the three physical interior angles <= 2*pi"
+        },
+        "constraints": [
+          {
+            "pole": "P0",
+            "contact_points": [
+              "P0",
+              "P1",
+              "S[B_end]"
+            ],
+            "turn_coefficients": {
+              "Theta0": -1,
+              "Theta1": 1,
+              "Theta2": 1
+            },
+            "individual_capacity_pi_units": 3,
+            "inequality": "-Theta0 + Theta1 + Theta2 >= pi"
+          },
+          {
+            "pole": "P1",
+            "contact_points": [
+              "P1",
+              "P0",
+              "P1"
+            ],
+            "turn_coefficients": {
+              "Theta1": 1,
+              "Theta2": 2
+            },
+            "individual_capacity_pi_units": 3,
+            "inequality": "Theta1 + 2*Theta2 >= pi"
+          }
+        ],
+        "joint_capacity_pi_units": {
+          "numerator": 3,
+          "denominator": 1,
+          "decimal": 3.0
+        },
+        "feasible": true,
+        "discard_reason": null
+      }
+    },
+    {
+      "derivation": [
+        "equal_length",
+        "right_strictly_shorter",
+        "involutive_palindrome"
+      ],
+      "A": "V0^-1 V1 V1^-1 V0",
+      "B": "V0^-1",
+      "angle_assignments": {
+        "J[A0:1]": "Theta0",
+        "J[A0:2]": "0",
+        "P0": "Theta1",
+        "P1": "Theta2",
+        "S[B_end]": "-Theta0"
+      },
+      "pole_angle_analysis": {
+        "convention": {
+          "prototype_orientation": "counterclockwise",
+          "signed_turn": "tau",
+          "interior_angle": "alpha = pi - tau",
+          "regular_turn_domain": "tau in (-pi, pi)",
+          "pole_condition": "sum of the three physical interior angles <= 2*pi"
+        },
+        "constraints": [
+          {
+            "pole": "P0",
+            "contact_points": [
+              "P0",
+              "P1",
+              "S[B_end]"
+            ],
+            "turn_coefficients": {
+              "Theta0": -1,
+              "Theta1": 1,
+              "Theta2": 1
+            },
+            "individual_capacity_pi_units": 3,
+            "inequality": "-Theta0 + Theta1 + Theta2 >= pi"
+          },
+          {
+            "pole": "P1",
+            "contact_points": [
+              "P1",
+              "P0",
+              "P1"
+            ],
+            "turn_coefficients": {
+              "Theta1": 1,
+              "Theta2": 2
+            },
+            "individual_capacity_pi_units": 3,
+            "inequality": "Theta1 + 2*Theta2 >= pi"
+          }
+        ],
+        "joint_capacity_pi_units": {
+          "numerator": 3,
+          "denominator": 1,
+          "decimal": 3.0
+        },
+        "feasible": true,
+        "discard_reason": null
+      }
+    }
+  ]
+}

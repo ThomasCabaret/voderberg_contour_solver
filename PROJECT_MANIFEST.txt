@@ -1,0 +1,56 @@
+# Project manifest
+
+- `EXTERNAL_BOUNDARY_NOTES.md` (4824 bytes): source, test, example, launcher, or supporting note
+- `INTEGRATION_REPORT.json` (3993 bytes): release validation report
+- `PROJECT_MANIFEST.txt` (4846 bytes): source, test, example, launcher, or supporting note
+- `README.md` (3208 bytes): Windows setup, architecture, exactness and usage
+- `TEST_RESULTS.txt` (8875 bytes): unit test output
+- `analysis_pipeline.py` (3620 bytes): source, test, example, launcher, or supporting note
+- `angle_constraints.py` (16428 bytes): source, test, example, launcher, or supporting note
+- `audit_geometric_filters.py` (28551 bytes): bounded core and experimental audit with Z3 filtering
+- `case_34_graph.json` (7917 bytes): source, test, example, launcher, or supporting note
+- `commuting_graph.dot` (324 bytes): source, test, example, launcher, or supporting note
+- `commuting_graph.json` (1508 bytes): source, test, example, launcher, or supporting note
+- `contact_side_filter.py` (5413 bytes): source, test, example, launcher, or supporting note
+- `experimental_pipeline.py` (8219 bytes): isolated experimental orchestration
+- `external_boundary_constraints.py` (37582 bytes): shared inner/outer boundary construction
+- `forced_point_coincidence.py` (16956 bytes): standalone forced-point prototype
+- `geometric_filter_audit.json` (22857 bytes): summary audit report
+- `geometric_filter_profiles.json` (24559418 bytes): detailed profiles for the web viewer
+- `method_status.py` (2175 bytes): machine-readable exact/incomplete/experimental registry
+- `parametric_graph.py` (20919 bytes): source, test, example, launcher, or supporting note
+- `pole_angle_filter.py` (10504 bytes): source, test, example, launcher, or supporting note
+- `profile_formatter.py` (8734 bytes): source, test, example, launcher, or supporting note
+- `project_cli.py` (2531 bytes): single command-line launcher
+- `projection_topology.py` (2977 bytes): source, test, example, launcher, or supporting note
+- `requirements.txt` (72 bytes): pip dependencies
+- `results_export.py` (6952 bytes): stable detailed JSON export
+- `results_web.py` (23198 bytes): local web viewer
+- `run_audit.cmd` (282 bytes): source, test, example, launcher, or supporting note
+- `run_audit.ps1` (297 bytes): source, test, example, launcher, or supporting note
+- `run_tests.cmd` (282 bytes): source, test, example, launcher, or supporting note
+- `run_tests.ps1` (297 bytes): source, test, example, launcher, or supporting note
+- `run_web.cmd` (284 bytes): source, test, example, launcher, or supporting note
+- `run_web.ps1` (293 bytes): source, test, example, launcher, or supporting note
+- `se2_holonomy_filter.py` (12736 bytes): source, test, example, launcher, or supporting note
+- `settings.py` (1838 bytes): central configuration and canonical filenames
+- `symbolic_enumerator.py` (30593 bytes): source, test, example, launcher, or supporting note
+- `test_contact_side_filter.py` (1989 bytes): source, test, example, launcher, or supporting note
+- `test_experimental_pipeline.py` (1093 bytes): source, test, example, launcher, or supporting note
+- `test_external_boundary_constraints.py` (2988 bytes): source, test, example, launcher, or supporting note
+- `test_forced_point_coincidence.py` (3693 bytes): source, test, example, launcher, or supporting note
+- `test_parametric_graph.py` (2110 bytes): source, test, example, launcher, or supporting note
+- `test_pole_angle_filter.py` (3631 bytes): source, test, example, launcher, or supporting note
+- `test_profile_formatter.py` (2557 bytes): source, test, example, launcher, or supporting note
+- `test_projection_topology.py` (2997 bytes): source, test, example, launcher, or supporting note
+- `test_results_export.py` (2361 bytes): source, test, example, launcher, or supporting note
+- `test_results_web.py` (1669 bytes): source, test, example, launcher, or supporting note
+- `test_se2_holonomy_filter.py` (3301 bytes): source, test, example, launcher, or supporting note
+- `test_turning_filter.py` (4018 bytes): source, test, example, launcher, or supporting note
+- `test_voderberg_profile.py` (3517 bytes): source, test, example, launcher, or supporting note
+- `turning_filter.py` (12287 bytes): source, test, example, launcher, or supporting note
+- `JOINT_TRANSLATION_Z3_NOTES.md` (1571 bytes): source, test, example, launcher, or supporting note
+- `joint_translation_z3.py` (18402 bytes): polynomial Z3/NLSAT backend
+- `run_z3_voderberg.cmd` (311 bytes): source, test, example, launcher, or supporting note
+- `run_z3_voderberg.ps1` (347 bytes): source, test, example, launcher, or supporting note
+- `test_joint_translation_z3.py` (1766 bytes): source, test, example, launcher, or supporting note

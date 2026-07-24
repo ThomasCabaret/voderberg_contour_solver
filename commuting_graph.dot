@@ -1,0 +1,7 @@
+digraph derivation_graph {
+  n0 [shape=box, label="V0 V1 = V1 V0"];
+  n1 [shape=doublecircle, label="terminal"];
+  n0 -> n1 [label="same_cut: V0->K0, V1->K0"];
+  n0 -> n0 [label="left_cut_before_right_cut: V0->V0, V1->V0 V1 [repeat n>=0]"];
+  n0 -> n0 [label="right_cut_before_left_cut: V0->V1 V0, V1->V1 [repeat n>=0]"];
+}

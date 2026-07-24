@@ -1,0 +1,35 @@
+{
+  "case_id": 1447,
+  "derivation": [
+    "equal_length",
+    "left_strictly_shorter",
+    "involutive_palindrome"
+  ],
+  "A": "V0 V1 V1^-1 V0^-1",
+  "B": "V0 V1 V1^-1",
+  "total_turn": {
+    "convention": {
+      "orientation": "counterclockwise",
+      "total_turn": "2*pi",
+      "point_turn_domain": "(-pi, pi)",
+      "segment_total_turn_domain": "R"
+    },
+    "equation": "Kappa[V0] - Theta0 + Theta1 + Theta2 = 2*pi",
+    "segment_coefficients": {
+      "V0": 1
+    },
+    "point_coefficients": {
+      "Theta0": -1,
+      "Theta1": 1,
+      "Theta2": 1
+    },
+    "zero_points": [
+      "J[A1:1]",
+      "J[B0:2]"
+    ],
+    "point_capacity_pi_units": 3,
+    "has_unbounded_segment_freedom": true,
+    "feasible": true,
+    "discard_reason": null
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "profile_count": 1078,
+  "stage_counts": {
+    "total_turn_and_poles": 316,
+    "retained": 307,
+    "total_turn": 34,
+    "pole_angles": 410,
+    "translation": 11
+  },
+  "retained": 307,
+  "viewer_default_sort": "retained first, then latest rejection stage, fewer reflections, lower complexity",
+  "server_check": {
+    "health": 200,
+    "api_profile_count": 1078,
+    "html_controls_present": true
+  }
+}

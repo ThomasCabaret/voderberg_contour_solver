@@ -1,0 +1,301 @@
+{
+  "case": {
+    "case_id": 1447,
+    "marker_loci": {
+      "A_start": "P1",
+      "A_end": "P0",
+      "B_start": "P1",
+      "B_end": "A"
+    },
+    "a_interior_blocks": [
+      [
+        "B_end"
+      ]
+    ],
+    "b_interior_blocks": [],
+    "marker_boundaries": {
+      "A_start": 2,
+      "A_end": 0,
+      "B_start": 2,
+      "B_end": 1
+    },
+    "a_direction": "reverse",
+    "b_direction": "reverse",
+    "a_isometry": "direct",
+    "b_isometry": "direct",
+    "a_mirror_sign": 1,
+    "b_mirror_sign": 1,
+    "contact_parity": "DD",
+    "a_word": "A0 A1",
+    "b_word": "B0",
+    "cycle_word": "A0 A1 B0",
+    "a_target": "A1^-1 A0^-1",
+    "b_target": "A1^-1",
+    "equations": [
+      "A0 A1 = A1^-1 A0^-1",
+      "B0 = A1^-1"
+    ]
+  },
+  "derivation": [
+    "equal_length",
+    "left_strictly_shorter",
+    "involutive_palindrome"
+  ],
+  "A": "V0 V1 V1^-1 V0^-1",
+  "B": "V0 V1 V1^-1",
+  "contour": "P0 V0 V1 V1^-1 V0^-1 P1 V0 V1 V1^-1",
+  "contact_sides": {
+    "stage": "placement invariant validation",
+    "convention": {
+      "prototype_orientation": "counterclockwise",
+      "positive_boundary_interior_side": "left",
+      "contact_requirement": "the two tile interiors lie on opposite sides",
+      "parity_equation": "mirror_sign * target_direction = -1"
+    },
+    "allow_reflections": true,
+    "embedded_parity": "DD",
+    "requires_reflection": false,
+    "feasible": true,
+    "discard_reason": null,
+    "constraints": [
+      {
+        "projection": "A",
+        "target_direction": "reverse",
+        "mirror_sign": 1,
+        "required_mirror_sign": 1,
+        "required_isometry": "direct",
+        "reference_interior_side": "left",
+        "copy_interior_side": "right",
+        "satisfied": true
+      },
+      {
+        "projection": "B",
+        "target_direction": "reverse",
+        "mirror_sign": 1,
+        "required_mirror_sign": 1,
+        "required_isometry": "direct",
+        "reference_interior_side": "left",
+        "copy_interior_side": "right",
+        "satisfied": true
+      }
+    ]
+  },
+  "angle_solution": {
+    "convention": {
+      "quantity": "signed turning angle",
+      "straight": "0",
+      "opposite_relation": "tau_left = -tau_right",
+      "regularity_assumption": "turning angles are represented in (-pi, pi); pi U-turns/cusps are excluded"
+    },
+    "equations": [
+      {
+        "left_point": "S[B_end]",
+        "right_point": "J[A1:2]",
+        "sign": "opposite",
+        "projection": "A",
+        "boundary_index": 1,
+        "text": "turn(S[B_end]) =- turn(J[A1:2])"
+      },
+      {
+        "left_point": "J[A1:1]",
+        "right_point": "J[A1:1]",
+        "sign": "opposite",
+        "projection": "A",
+        "boundary_index": 2,
+        "text": "turn(J[A1:1]) =- turn(J[A1:1])"
+      },
+      {
+        "left_point": "J[A1:2]",
+        "right_point": "S[B_end]",
+        "sign": "opposite",
+        "projection": "A",
+        "boundary_index": 3,
+        "text": "turn(J[A1:2]) =- turn(S[B_end])"
+      },
+      {
+        "left_point": "J[B0:1]",
+        "right_point": "J[A1:2]",
+        "sign": "opposite",
+        "projection": "B",
+        "boundary_index": 1,
+        "text": "turn(J[B0:1]) =- turn(J[A1:2])"
+      },
+      {
+        "left_point": "J[B0:2]",
+        "right_point": "J[A1:1]",
+        "sign": "opposite",
+        "projection": "B",
+        "boundary_index": 2,
+        "text": "turn(J[B0:2]) =- turn(J[A1:1])"
+      }
+    ],
+    "assignments": {
+      "J[A1:1]": "0",
+      "J[A1:2]": "Theta0",
+      "J[B0:1]": "-Theta0",
+      "J[B0:2]": "0",
+      "P0": "Theta1",
+      "P1": "Theta2",
+      "S[B_end]": "-Theta0"
+    },
+    "zero_points": [
+      "J[A1:1]",
+      "J[B0:2]"
+    ],
+    "parameter_count": 3
+  },
+  "total_turn": {
+    "convention": {
+      "orientation": "counterclockwise",
+      "total_turn": "2*pi",
+      "point_turn_domain": "(-pi, pi)",
+      "segment_total_turn_domain": "R"
+    },
+    "equation": "Kappa[V0] - Theta0 + Theta1 + Theta2 = 2*pi",
+    "segment_coefficients": {
+      "V0": 1
+    },
+    "point_coefficients": {
+      "Theta0": -1,
+      "Theta1": 1,
+      "Theta2": 1
+    },
+    "zero_points": [
+      "J[A1:1]",
+      "J[B0:2]"
+    ],
+    "point_capacity_pi_units": 3,
+    "has_unbounded_segment_freedom": true,
+    "feasible": true,
+    "discard_reason": null
+  },
+  "pole_angles": {
+    "convention": {
+      "prototype_orientation": "counterclockwise",
+      "signed_turn": "tau",
+      "interior_angle": "alpha = pi - tau",
+      "regular_turn_domain": "tau in (-pi, pi)",
+      "pole_condition": "sum of the three physical interior angles <= 2*pi"
+    },
+    "constraints": [
+      {
+        "pole": "P0",
+        "contact_points": [
+          "P0",
+          "P1",
+          "S[B_end]"
+        ],
+        "turn_coefficients": {
+          "Theta0": -1,
+          "Theta1": 1,
+          "Theta2": 1
+        },
+        "individual_capacity_pi_units": 3,
+        "inequality": "-Theta0 + Theta1 + Theta2 >= pi"
+      },
+      {
+        "pole": "P1",
+        "contact_points": [
+          "P1",
+          "P0",
+          "P1"
+        ],
+        "turn_coefficients": {
+          "Theta1": 1,
+          "Theta2": 2
+        },
+        "individual_capacity_pi_units": 3,
+        "inequality": "Theta1 + 2*Theta2 >= pi"
+      }
+    ],
+    "joint_capacity_pi_units": {
+      "numerator": 3,
+      "denominator": 1,
+      "decimal": 3.0
+    },
+    "feasible": true,
+    "discard_reason": null
+  },
+  "se2_holonomy": {
+    "mirror_sign_a": 1,
+    "mirror_sign_b": 1,
+    "rotation_holonomy": {
+      "convention": {
+        "orientation": "counterclockwise",
+        "total_turn": "2*pi",
+        "point_turn_domain": "(-pi, pi)",
+        "segment_total_turn_domain": "R"
+      },
+      "equation": "Kappa[V0] - Theta0 + Theta1 + Theta2 = 2*pi",
+      "segment_coefficients": {
+        "V0": 1
+      },
+      "point_coefficients": {
+        "Theta0": -1,
+        "Theta1": 1,
+        "Theta2": 1
+      },
+      "zero_points": [
+        "J[A1:1]",
+        "J[B0:2]"
+      ],
+      "point_capacity_pi_units": 3,
+      "has_unbounded_segment_freedom": true,
+      "feasible": true,
+      "discard_reason": null
+    },
+    "translation_holonomy": {
+      "endpoint_displacement_assumption": "every nonempty free curve is a proper subarc of a future simple contour and therefore has nonzero endpoint displacement",
+      "coefficients": [
+        {
+          "variable": "V0",
+          "occurrence_count": 3,
+          "formal_phasor_sum": [
+            {
+              "phase": "0",
+              "coefficients": {},
+              "multiplicity": 2
+            },
+            {
+              "phase": "Theta2",
+              "coefficients": {
+                "Theta2": 1
+              },
+              "multiplicity": 1
+            }
+          ]
+        },
+        {
+          "variable": "V1",
+          "occurrence_count": 4,
+          "formal_phasor_sum": [
+            {
+              "phase": "Kappa[V0] - Theta0",
+              "coefficients": {
+                "Kappa[V0]": 1,
+                "Theta0": -1
+              },
+              "multiplicity": 2
+            },
+            {
+              "phase": "Kappa[V0] - Theta0 + Theta2",
+              "coefficients": {
+                "Kappa[V0]": 1,
+                "Theta0": -1,
+                "Theta2": 1
+              },
+              "multiplicity": 2
+            }
+          ]
+        }
+      ],
+      "exact_obstruction": false,
+      "status": "undecided_no_exact_obstruction",
+      "discard_reason": null
+    },
+    "passes_filter": true,
+    "interpretation": "passes_filter means no contradiction was proved by this conservative necessary-condition filter; it is not a proof of geometric realization",
+    "discard_reason": null
+  },
+  "passes_all_current_filters": true
+}
