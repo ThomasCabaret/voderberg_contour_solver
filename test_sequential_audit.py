@@ -27,6 +27,27 @@ class SequentialAuditTests(unittest.TestCase):
             0,
         )
 
+
+    def test_contour_layers_are_independently_configurable(self):
+        result = audit.audit(
+            1,
+            12,
+            formal_solver_mode="legacy-bounded",
+            collect_profiles=False,
+            run_z3=False,
+            show_progress=False,
+            parity_diagnostics=False,
+            enable_global_linear_angle_filter=False,
+            enable_global_linear_length_filter=False,
+            enable_chord_length_layer=False,
+            enable_signed_area_layer=False,
+        )
+        scope = result["scope"]
+        self.assertFalse(scope["global_linear_angle_filter_enabled"])
+        self.assertFalse(scope["global_linear_length_filter_enabled"])
+        self.assertFalse(scope["chord_length_layer_enabled"])
+        self.assertFalse(scope["signed_area_layer_enabled"])
+
     def test_type_selection_is_applied_after_formal_solving(self):
         result = audit.audit(
             5,

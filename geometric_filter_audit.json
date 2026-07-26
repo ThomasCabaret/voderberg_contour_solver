@@ -21,6 +21,10 @@
     "curve_term_specialization_enabled": true,
     "positive_length_filter_enabled": true,
     "solution_canonicalization_enabled": true,
+    "global_linear_angle_filter_enabled": true,
+    "global_linear_length_filter_enabled": true,
+    "chord_length_layer_enabled": true,
+    "signed_area_layer_enabled": true,
     "voderberg_type_selection": "all",
     "exhaustiveness": "exact partial formal solving on completely constructed supported residual graphs; unsupported/truncated systems are retained without downstream profiles; geometric filters remain necessary-condition filters"
   },
@@ -78,7 +82,12 @@
     "global_linear_contour_filter": {
       "status": "exact_within_model",
       "automatic_rejection_allowed": true,
-      "description": "Two exact rational LP blocks enforce the maximal useful linear model on the decorated reference and external contours: total turns, pole sectors, principal bounds on primitive and composite boundary turns, positive formal curve lengths, and equal normalized inner/outer perimeters."
+      "description": "Two independently configurable exact rational LP blocks enforce the maximal useful linear model on the decorated reference and external contours: total turns, pole sectors, principal bounds on primitive and composite boundary turns, positive formal curve lengths, and equal normalized inner/outer perimeters."
+    },
+    "global_metric_contour_model": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": false,
+      "description": "Solver-independent compiler for per-curve arc lengths, endpoint chords and signed arc areas on the ordered inner and external contours. It records reversal/reflection signs and exact degree-two concatenation data without re-solving internal contact interfaces."
     },
     "translation_holonomy_filter": {
       "status": "sound_rejection_incomplete_coverage",
@@ -113,7 +122,7 @@
     "joint_translation_z3": {
       "status": "sound_rejection_incomplete_coverage",
       "automatic_rejection_allowed": true,
-      "description": "Z3/NLSAT solves a polynomial relaxation augmented with pointwise equations from one global direct or reflected isometry for each copy. UNSAT is a safe rejection for the encoded model; SAT is only a candidate because generic curved-arc intersections, winding intervals, and complete three-interior disjointness are not encoded."
+      "description": "Z3/NLSAT solves configurable nested polynomial layers: inner/outer rotation and chord closure, positive arc lengths with normalized perimeters and chord-length bounds, signed arc areas with exact degree-two concatenation and A_external = 3*A_inner, plus pointwise equations from one global isometry per copy. UNSAT is a safe rejection; SAT remains only a candidate because generic curved-arc intersections, principal winding intervals, and complete three-interior disjointness are not encoded."
     }
   },
   "formal_equation_audit_summary": {
@@ -2848,11 +2857,11 @@
     "prototype translation-holonomy obstruction",
     "optional parity diagnostics",
     "shared inner/outer boundary construction",
-    "exact global linear contour filter (inner/outer turns, principal point turns, poles, and normalized perimeters)",
+    "configurable exact global linear contour blocks (inner/outer angles and normalized perimeters)",
     "elementary joint translation filter",
     "forced point coincidence filter on inner/outer boundaries",
     "shared-frame three-copy coincidence and same-side overlap filter",
-    "optional Z3/NLSAT polynomial filter with pointwise global-copy isometries"
+    "optional Z3/NLSAT polynomial layers: closure, chord/length metric constraints, signed inner/outer areas, and pointwise global-copy isometries"
   ],
   "interpretation": {
     "z3_unsat": "Exact for the polynomial relaxation and safe for rejection.",

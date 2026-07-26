@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import external_boundary_constraints as external
+import global_metric_contour_model as metric_contours
 import placed_copy_geometry as placed_geometry
 import settings
 import symbolic_enumerator as base
@@ -43,12 +44,18 @@ class Z3Problem:
     script_smt2: str
     angle_symbol_map: Tuple[Tuple[str, Tuple[str, str]], ...]
     chord_symbol_map: Tuple[Tuple[str, Tuple[str, str]], ...]
+    length_symbol_map: Tuple[Tuple[str, str], ...]
+    arc_area_symbol_map: Tuple[Tuple[str, str], ...]
     rotation_equation_count: int
     translation_equation_count: int
     contact_point_equation_count: int
     distinguished_point_inequality_count: int
     global_isometry_enforced: bool
     require_all_chords_nonzero: bool
+    metric_length_constraints_enabled: bool
+    signed_area_constraints_enabled: bool
+    metric_constraint_count: int
+    signed_area_constraint_count: int
     relaxation_notes: Tuple[str, ...]
 
     def to_dict(self) -> Dict[str, object]:
@@ -61,12 +68,18 @@ class Z3Problem:
                 name: {"x": symbols[0], "y": symbols[1]}
                 for name, symbols in self.chord_symbol_map
             },
+            "length_symbol_map": dict(self.length_symbol_map),
+            "arc_area_symbol_map": dict(self.arc_area_symbol_map),
             "rotation_equation_count": self.rotation_equation_count,
             "translation_equation_count": self.translation_equation_count,
             "contact_point_equation_count": self.contact_point_equation_count,
             "distinguished_point_inequality_count": self.distinguished_point_inequality_count,
             "global_isometry_enforced": self.global_isometry_enforced,
             "require_all_chords_nonzero": self.require_all_chords_nonzero,
+            "metric_length_constraints_enabled": self.metric_length_constraints_enabled,
+            "signed_area_constraints_enabled": self.signed_area_constraints_enabled,
+            "metric_constraint_count": self.metric_constraint_count,
+            "signed_area_constraint_count": self.signed_area_constraint_count,
             "relaxation_notes": list(self.relaxation_notes),
         }
 
@@ -328,11 +341,108 @@ def _squared_norm(item: ComplexExpr) -> str:
     return _add((_mul((item.real, item.real)), _mul((item.imag, item.imag))))
 
 
+def _determinant(left: ComplexExpr, right: ComplexExpr) -> str:
+    return _add((
+        _mul((left.real, right.imag)),
+        _neg(_mul((left.imag, right.real))),
+    ))
+
+
+def _metric_segment_vector(
+    segment: metric_contours.MetricSegmentOccurrence,
+    angle_symbols: Mapping[str, Tuple[str, str]],
+    chord_symbols: Mapping[str, Tuple[str, str]],
+) -> ComplexExpr:
+    x_symbol, y_symbol = chord_symbols[segment.variable]
+    chord = ComplexExpr(x_symbol, y_symbol)
+    if segment.conjugated_chord:
+        chord = _complex_conjugate(chord)
+    return _complex_mul(_phasor(segment.phase, angle_symbols), chord)
+
+
+def _append_boundary_area_constraints(
+    lines: List[str],
+    boundary: metric_contours.MetricBoundaryModel,
+    symbol_prefix: str,
+    angle_symbols: Mapping[str, Tuple[str, str]],
+    chord_symbols: Mapping[str, Tuple[str, str]],
+    area_symbols: Mapping[str, str],
+) -> Tuple[str, int]:
+    """Append a linear-size degree-two area accumulator for one boundary."""
+    count = 0
+    prefix_x = f"{symbol_prefix}_prefix_x_0"
+    prefix_y = f"{symbol_prefix}_prefix_y_0"
+    accumulator = f"{symbol_prefix}_area_0"
+    for symbol in (prefix_x, prefix_y, accumulator):
+        lines.append(f"(declare-fun {symbol} () Real)")
+        lines.append(f"(assert (= {symbol} 0))")
+        count += 1
+
+    for index, segment in enumerate(boundary.segments):
+        vector = _metric_segment_vector(segment, angle_symbols, chord_symbols)
+        vector_x = f"{symbol_prefix}_segment_x_{index}"
+        vector_y = f"{symbol_prefix}_segment_y_{index}"
+        next_prefix_x = f"{symbol_prefix}_prefix_x_{index + 1}"
+        next_prefix_y = f"{symbol_prefix}_prefix_y_{index + 1}"
+        next_accumulator = f"{symbol_prefix}_area_{index + 1}"
+        for symbol in (
+            vector_x,
+            vector_y,
+            next_prefix_x,
+            next_prefix_y,
+            next_accumulator,
+        ):
+            lines.append(f"(declare-fun {symbol} () Real)")
+
+        lines.append(f"(assert (= {vector_x} {vector.real}))")
+        lines.append(f"(assert (= {vector_y} {vector.imag}))")
+        lines.append(
+            f"(assert (= {next_prefix_x} {_add((prefix_x, vector_x))}))"
+        )
+        lines.append(
+            f"(assert (= {next_prefix_y} {_add((prefix_y, vector_y))}))"
+        )
+        wedge = _add((
+            _mul((prefix_x, vector_y)),
+            _neg(_mul((prefix_y, vector_x))),
+        ))
+        increment = _add((
+            _scale(segment.signed_arc_area_sign, area_symbols[segment.variable]),
+            _scale(Fraction(1, 2), wedge),
+        ))
+        lines.append(
+            f"(assert (= {next_accumulator} {_add((accumulator, increment))}))"
+        )
+        count += 5
+        prefix_x = next_prefix_x
+        prefix_y = next_prefix_y
+        accumulator = next_accumulator
+
+    # This duplicates the translation equation intentionally and gives the area
+    # accumulator an explicit closed-loop endpoint in its own local encoding.
+    lines.append(f"(assert (= {prefix_x} 0))")
+    lines.append(f"(assert (= {prefix_y} 0))")
+    count += 2
+    return accumulator, count
+
+
+def _perimeter_expression(
+    coefficients: Sequence[Tuple[str, int]],
+    length_symbols: Mapping[str, str],
+) -> str:
+    return _add(
+        _scale(count, length_symbols[name])
+        for name, count in coefficients
+    )
+
+
 def build_z3_problem(
     system: external.JointBoundarySystem,
     *,
     placed_geometry_analysis: Optional[placed_geometry.PlacedCopyGeometryAnalysis] = None,
     require_all_chords_nonzero: bool = settings.Z3_REQUIRE_ALL_CHORDS_NONZERO,
+    enable_metric_lengths: bool = settings.DEFAULT_ENABLE_CHORD_LENGTH_LAYER,
+    enable_signed_areas: bool = settings.DEFAULT_ENABLE_SIGNED_AREA_LAYER,
 ) -> Z3Problem:
     """Build a polynomial QF_NRA relaxation for Z3/NLSAT.
 
@@ -341,8 +451,19 @@ def build_z3_problem(
     principal-angle interval information.  This makes the formula weaker than
     the full angle model, so an ``unsat`` result remains a sound discard.
     """
+    if enable_signed_areas and not enable_metric_lengths:
+        raise ValueError(
+            "The signed-area layer requires the chord/length layer for scale "
+            "normalization and sound rational area bounds."
+        )
+
     angle_variables = _all_angle_variables(system, placed_geometry_analysis)
     chord_variables = _all_chord_variables(system, placed_geometry_analysis)
+    metric_model = (
+        metric_contours.build_global_metric_contour_model(system)
+        if enable_metric_lengths or enable_signed_areas
+        else None
+    )
     angle_symbols = {
         name: (_safe_symbol("rot_c", index), _safe_symbol("rot_s", index))
         for index, name in enumerate(angle_variables)
@@ -351,6 +472,15 @@ def build_z3_problem(
         name: (_safe_symbol("dx", index), _safe_symbol("dy", index))
         for index, name in enumerate(chord_variables)
     }
+    metric_variables = metric_model.curve_variables if metric_model is not None else ()
+    length_symbols = {
+        name: _safe_symbol("arc_length", index)
+        for index, name in enumerate(metric_variables)
+    }
+    area_symbols = {
+        name: _safe_symbol("arc_area", index)
+        for index, name in enumerate(metric_variables)
+    } if enable_signed_areas else {}
 
     lines: List[str] = [
         "; Generated by joint_translation_z3.py",
@@ -372,6 +502,18 @@ def build_z3_problem(
         lines.append(f"; ({x_symbol}, {y_symbol}) represents D[{name}]")
         lines.append(f"(declare-fun {x_symbol} () Real)")
         lines.append(f"(declare-fun {y_symbol} () Real)")
+
+    if enable_metric_lengths:
+        for name in metric_variables:
+            symbol = length_symbols[name]
+            lines.append(f"; {symbol} represents geometric arc length L[{name}]")
+            lines.append(f"(declare-fun {symbol} () Real)")
+
+    if enable_signed_areas:
+        for name in metric_variables:
+            symbol = area_symbols[name]
+            lines.append(f"; {symbol} represents signed arc area S[{name}]")
+            lines.append(f"(declare-fun {symbol} () Real)")
 
     for equation in system.rotation_equations:
         residual = _rotation_residual(equation)
@@ -432,6 +574,71 @@ def build_z3_problem(
                 lines.append(f"(assert (> {_squared_norm(residual)} 0))")
                 distinguished_point_inequality_count += 1
 
+    metric_constraint_count = 0
+    signed_area_constraint_count = 0
+    if enable_metric_lengths:
+        assert metric_model is not None
+        lines.append("; Chord/length layer: positive arc lengths and normalized perimeters")
+        for name in metric_variables:
+            length = length_symbols[name]
+            lines.append(f"(assert (> {length} 0))")
+            metric_constraint_count += 1
+
+        inner_perimeter = _perimeter_expression(
+            metric_model.inner_boundary.perimeter_coefficients, length_symbols
+        )
+        outer_perimeter = _perimeter_expression(
+            metric_model.outer_boundary.perimeter_coefficients, length_symbols
+        )
+        lines.append(f"(assert (= {inner_perimeter} 1))")
+        lines.append(f"(assert (= {outer_perimeter} 1))")
+        metric_constraint_count += 2
+
+        for name in metric_variables:
+            x_symbol, y_symbol = chord_symbols[name]
+            norm = _add((_mul((x_symbol, x_symbol)), _mul((y_symbol, y_symbol))))
+            length_sq = _mul((length_symbols[name], length_symbols[name]))
+            lines.append(f"; Chord length cannot exceed arc length for {name}")
+            lines.append(f"(assert (<= {norm} {length_sq}))")
+            metric_constraint_count += 1
+
+    if enable_signed_areas:
+        assert metric_model is not None
+        lines.append("; Signed-area layer: exact degree-two concatenation on C and E")
+        inner_area, inner_area_count = _append_boundary_area_constraints(
+            lines,
+            metric_model.inner_boundary,
+            "inner_contour",
+            angle_symbols,
+            chord_symbols,
+            area_symbols,
+        )
+        outer_area, outer_area_count = _append_boundary_area_constraints(
+            lines,
+            metric_model.outer_boundary,
+            "outer_contour",
+            angle_symbols,
+            chord_symbols,
+            area_symbols,
+        )
+        signed_area_constraint_count += inner_area_count + outer_area_count
+        for name in metric_variables:
+            area = area_symbols[name]
+            length_sq = _mul((length_symbols[name], length_symbols[name]))
+            # Closing an arc by its chord gives a loop of length <= 2L.
+            # Isoperimetry and pi > 3 imply |S[X]| <= L[X]^2 / 3.
+            bound = _scale(Fraction(1, 3), length_sq)
+            lines.append(f"(assert (<= {area} {bound}))")
+            lines.append(f"(assert (>= {area} {_neg(bound)}))")
+            signed_area_constraint_count += 2
+        lines.append("; The reference contour is positively oriented")
+        lines.append(f"(assert (> {inner_area} 0))")
+        lines.append("; The external union contains three congruent tile interiors")
+        lines.append(f"(assert (= {outer_area} {_scale(3, inner_area)}))")
+        # L(E)=1 and pi>3 give A(E)<1/12, hence A(C)<1/36.
+        lines.append(f"(assert (<= {inner_area} {_fraction_smt(Fraction(1, 36))}))")
+        signed_area_constraint_count += 3
+
     norms: List[str] = []
     for name in chord_variables:
         x_symbol, y_symbol = chord_symbols[name]
@@ -441,11 +648,13 @@ def build_z3_problem(
             lines.append(f"; D[{name}] must connect two distinct contour points")
             lines.append(f"(assert (> {norm} 0))")
 
-    if norms:
+    if not norms:
+        lines.append("(assert false)")
+    elif not enable_metric_lengths:
         lines.append("; Homogeneous normalization removes the all-zero chord solution")
         lines.append(f"(assert (= {_add(norms)} 1))")
     else:
-        lines.append("(assert false)")
+        lines.append("; Scale is fixed by the normalized inner/outer perimeters")
 
     assertions_smt2 = "\n".join(lines) + "\n"
     script_smt2 = assertions_smt2 + "(check-sat)\n(get-model)\n"
@@ -454,12 +663,18 @@ def build_z3_problem(
         script_smt2=script_smt2,
         angle_symbol_map=tuple(sorted(angle_symbols.items())),
         chord_symbol_map=tuple(sorted(chord_symbols.items())),
+        length_symbol_map=tuple(sorted(length_symbols.items())),
+        arc_area_symbol_map=tuple(sorted(area_symbols.items())),
         rotation_equation_count=2 * len(system.rotation_equations),
         translation_equation_count=2 * len(system.translation_equations),
         contact_point_equation_count=2 * contact_point_equation_count,
         distinguished_point_inequality_count=distinguished_point_inequality_count,
         global_isometry_enforced=placed_geometry_analysis is not None,
         require_all_chords_nonzero=require_all_chords_nonzero,
+        metric_length_constraints_enabled=enable_metric_lengths,
+        signed_area_constraints_enabled=enable_signed_areas,
+        metric_constraint_count=metric_constraint_count,
+        signed_area_constraint_count=signed_area_constraint_count,
         relaxation_notes=(
             "Angles are represented only by unit phasors; winding numbers are forgotten.",
             "Principal point-angle bounds and pole inequalities are enforced by the exact joint linear filter, not repeated here.",
@@ -467,6 +682,16 @@ def build_z3_problem(
                 "A single global direct/reflected isometry per copy is enforced at every distinguished contact point."
                 if placed_geometry_analysis is not None
                 else "Global copy isometries were not supplied to this standalone problem."
+            ),
+            (
+                "Arc lengths are positive, both perimeters are normalized to one, and every chord norm is bounded by its arc length."
+                if enable_metric_lengths
+                else "The chord/length metric layer is disabled."
+            ),
+            (
+                "Signed arc areas, exact degree-two concatenation, positive inner area, and A_external = 3*A_inner are enforced."
+                if enable_signed_areas
+                else "The signed-area layer is disabled."
             ),
             "Generic intersections between interiors of curved arcs are not encoded.",
         ),
@@ -628,6 +853,16 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--derivation", default="")
     parser.add_argument("--run", action="store_true")
     parser.add_argument(
+        "--skip-chord-length-layer",
+        action="store_true",
+        help="Disable positive arc lengths, normalized perimeters and |D| <= L.",
+    )
+    parser.add_argument(
+        "--skip-signed-area-layer",
+        action="store_true",
+        help="Disable signed arc-area variables and A_external = 3*A_inner.",
+    )
+    parser.add_argument(
         "--timeout-ms",
         type=int,
         default=settings.Z3_DEFAULT_TIMEOUT_MS,
@@ -644,7 +879,14 @@ def main() -> int:
         case, state = find_case_and_state(args.case_id, derivation)
     system = external.build_joint_boundary_system(case, state)
     placed = placed_geometry.analyze_placed_copy_geometry(case, state, system)
-    problem = build_z3_problem(system, placed_geometry_analysis=placed)
+    metric_enabled = not args.skip_chord_length_layer
+    area_enabled = metric_enabled and not args.skip_signed_area_layer
+    problem = build_z3_problem(
+        system,
+        placed_geometry_analysis=placed,
+        enable_metric_lengths=metric_enabled,
+        enable_signed_areas=area_enabled,
+    )
     args.output.write_text(problem.script_smt2, encoding="utf-8")
     payload: Dict[str, object] = {
         "case_id": case.case_id,

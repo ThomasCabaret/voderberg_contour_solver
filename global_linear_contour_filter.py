@@ -44,18 +44,20 @@ both faster and more diagnostic.
 Deliberate stopping point
 -------------------------
 
-Scalar area variables are not introduced here.  Before signed arc areas and
-chords are coupled through the determinant term in Chen's concatenation law,
-constraints such as ``A_external = 3*A_inner`` and isoperimetric upper bounds
-are always satisfiable by choosing an arbitrarily small positive area.  Adding
-those free variables would therefore make the LP larger without rejecting any
-profile.
+Scalar area variables are not introduced into this LP.  Before signed arc
+areas and chords are coupled through the determinant term in Chen's
+concatenation law, constraints such as ``A_external = 3*A_inner`` are always
+satisfiable by choosing an arbitrarily small positive area.
 
-The next useful levels are intentionally left to separate future modules:
+The next layers are compiled independently by
+``global_metric_contour_model.py`` and ``joint_translation_z3.py``:
 
-* chord/length closure relaxation: LP polygonal outer approximations or SOCP;
-* lifted determinant and signed-area relaxation: SDP;
-* exact chord/rotation/signed-area system: QF_NRA / NLSAT.
+* positive arc lengths and chord-length inequalities;
+* exact degree-two signed-area concatenation on both contours;
+* ``A_external = 3*A_inner`` and rational isoperimetric bounds.
+
+Keeping those polynomial layers outside this module preserves a small exact
+rational LP and lets every level be enabled or disabled independently.
 """
 from __future__ import annotations
 
@@ -69,7 +71,7 @@ import pole_angle_filter as poles
 import rational_linear_program as rational_lp
 
 
-SCHEMA_VERSION = "global-linear-contour-filter-v1"
+SCHEMA_VERSION = "global-linear-contour-filter-v2"
 
 
 @dataclass(frozen=True)
@@ -134,6 +136,8 @@ class BoundaryTurnConstraint:
 
 @dataclass(frozen=True)
 class GlobalLinearContourAnalysis:
+    angle_block_enabled: bool
+    length_block_enabled: bool
     feasible: bool
     status: str
     discard_reason: Optional[str]
@@ -150,6 +154,10 @@ class GlobalLinearContourAnalysis:
     def to_dict(self) -> Dict[str, object]:
         return {
             "schema_version": SCHEMA_VERSION,
+            "configuration": {
+                "angle_block_enabled": self.angle_block_enabled,
+                "length_block_enabled": self.length_block_enabled,
+            },
             "feasible": self.feasible,
             "status": self.status,
             "discard_reason": self.discard_reason,
@@ -178,10 +186,10 @@ class GlobalLinearContourAnalysis:
                 "interfaces are not re-solved: their compatibility belongs to "
                 "the formal word/contact solver."
             ),
-            "deferred_levels": [
-                "chord/length closure relaxation by rational LP or SOCP",
-                "signed arc-area and determinant relaxation by SDP",
-                "exact chord/rotation/area feasibility by QF_NRA",
+            "next_levels": [
+                "polynomial chord/length layer with normalized perimeters",
+                "signed arc-area layer with A_external = 3*A_inner",
+                "future convex LP/SOCP/SDP relaxations for earlier rejection",
             ],
         }
 
@@ -498,44 +506,85 @@ def _solve_length_block(
     return analysis, variable_names, inner_coefficients, outer_coefficients
 
 
+def _disabled_block(name: str) -> LinearBlockAnalysis:
+    return LinearBlockAnalysis(
+        feasible=True,
+        status=f"{name}_disabled",
+        discard_reason=None,
+        strict_margin=RationalValue(0, 1),
+        variable_names=(),
+        equality_count=0,
+        strict_inequality_family_count=0,
+        witness=(),
+    )
+
+
 def analyze_global_linear_contours(
     system: external.JointBoundarySystem,
     pole_analysis: poles.PoleAngleAnalysis,
+    *,
+    enable_angle_block: bool = True,
+    enable_length_block: bool = True,
 ) -> GlobalLinearContourAnalysis:
-    """Solve the maximal useful exact linear model for C and E."""
+    """Solve the enabled exact linear blocks for C and E.
+
+    The two blocks are independent.  They are separately configurable so an
+    audit can measure their marginal effect or temporarily bypass one layer
+    without changing the construction of the decorated boundaries.
+    """
     point_constraints = _unique_boundary_turn_constraints(system)
-    angle_block, theta_names, kappa_names = _solve_angle_block(
-        system, pole_analysis, point_constraints
-    )
-    (
-        length_block,
-        length_names,
-        inner_coefficients,
-        outer_coefficients,
-    ) = _solve_length_block(system)
+    if enable_angle_block:
+        angle_block, theta_names, kappa_names = _solve_angle_block(
+            system, pole_analysis, point_constraints
+        )
+    else:
+        angle_block = _disabled_block("angular_block")
+        theta_names = ()
+        kappa_names = ()
+
+    if enable_length_block:
+        (
+            length_block,
+            length_names,
+            inner_coefficients,
+            outer_coefficients,
+        ) = _solve_length_block(system)
+    else:
+        length_block = _disabled_block("length_block")
+        length_names = ()
+        inner_coefficients = _perimeter_coefficients(system.inner_boundary)
+        outer_coefficients = _perimeter_coefficients(system.outer_boundary)
 
     feasible = angle_block.feasible and length_block.feasible
-    if not angle_block.feasible:
+    if enable_angle_block and not angle_block.feasible:
         status = "angular_block_reject"
         reason = angle_block.discard_reason
-    elif not length_block.feasible:
+    elif enable_length_block and not length_block.feasible:
         status = "length_block_reject"
         reason = length_block.discard_reason
+    elif not enable_angle_block and not enable_length_block:
+        status = "all_linear_blocks_disabled"
+        reason = None
     else:
         status = "feasible_with_strict_margin"
         reason = None
 
-    angle_margin = Fraction(
-        angle_block.strict_margin.numerator,
-        angle_block.strict_margin.denominator,
-    )
-    length_margin = Fraction(
-        length_block.strict_margin.numerator,
-        length_block.strict_margin.denominator,
-    )
-    margin = min(angle_margin, length_margin)
+    enabled_margins = []
+    if enable_angle_block:
+        enabled_margins.append(Fraction(
+            angle_block.strict_margin.numerator,
+            angle_block.strict_margin.denominator,
+        ))
+    if enable_length_block:
+        enabled_margins.append(Fraction(
+            length_block.strict_margin.numerator,
+            length_block.strict_margin.denominator,
+        ))
+    margin = min(enabled_margins) if enabled_margins else Fraction(0)
 
     return GlobalLinearContourAnalysis(
+        angle_block_enabled=enable_angle_block,
+        length_block_enabled=enable_length_block,
         feasible=feasible,
         status=status,
         discard_reason=reason,

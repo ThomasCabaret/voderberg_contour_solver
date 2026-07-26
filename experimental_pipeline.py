@@ -60,10 +60,10 @@ class ExperimentalProfileAnalysis:
             "affects_core_status": False,
             "exact_encoded_model_rejection": self.exact_encoded_model_rejection,
             "model_scope": (
-                "Shared inner/outer closure model, one exact rational global linear contour "
-                "system over both formal contours, a shared-frame placement of all three copies, exact symbolic "
-                "coincidence/overlap checks, and an optional polynomial Z3/NLSAT "
-                "model enforcing every distinguished contact point."
+                "Shared inner/outer closure model, configurable exact rational angular and "
+                "perimeter blocks, polynomial chord/length and signed-area layers, a shared-frame "
+                "placement of all three copies, exact symbolic coincidence/overlap checks, and "
+                "pointwise global-copy equations in the optional Z3/NLSAT model."
             ),
             "external_boundary": None if system is None else {
                 "outer_boundary": system.outer_boundary.to_dict(),
@@ -155,6 +155,10 @@ def analyze_experimental_profile(
     prepare_z3: bool = settings.DEFAULT_PREPARE_JOINT_TRANSLATION,
     run_z3: bool = settings.DEFAULT_RUN_Z3,
     timeout_ms: int = settings.Z3_DEFAULT_TIMEOUT_MS,
+    enable_global_angle_filter: bool = settings.DEFAULT_ENABLE_GLOBAL_LINEAR_ANGLE_FILTER,
+    enable_global_length_filter: bool = settings.DEFAULT_ENABLE_GLOBAL_LINEAR_LENGTH_FILTER,
+    enable_chord_length_layer: bool = settings.DEFAULT_ENABLE_CHORD_LENGTH_LAYER,
+    enable_signed_area_layer: bool = settings.DEFAULT_ENABLE_SIGNED_AREA_LAYER,
 ) -> ExperimentalProfileAnalysis:
     try:
         system = external.build_joint_boundary_system(case, state)
@@ -167,7 +171,10 @@ def analyze_experimental_profile(
     try:
         pole_analysis = pole_angle_filter.analyze_pole_angles(case, state)
         global_linear_analysis = global_linear.analyze_global_linear_contours(
-            system, pole_analysis
+            system,
+            pole_analysis,
+            enable_angle_block=enable_global_angle_filter,
+            enable_length_block=enable_global_length_filter,
         )
         inner_points = point_filter.analyze_boundary_path_forced_coincidences(
             system.inner_boundary, system.curve_turn_solution
@@ -219,6 +226,10 @@ def analyze_experimental_profile(
             system,
             placed_geometry_analysis=placed_analysis,
             require_all_chords_nonzero=settings.Z3_REQUIRE_ALL_CHORDS_NONZERO,
+            enable_metric_lengths=enable_chord_length_layer,
+            enable_signed_areas=(
+                enable_chord_length_layer and enable_signed_area_layer
+            ),
         )
     except NotImplementedError as exc:
         return ExperimentalProfileAnalysis(

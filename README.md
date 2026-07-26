@@ -40,11 +40,11 @@ L'audit affiche une boucle distincte pour chaque opération indépendante :
 8. obstruction translationnelle du prototype;
 9. diagnostic optionnel des quatre parités;
 10. construction des contours intérieur et extérieur;
-11. programme linéaire rationnel conjoint pour les deux rotations, les bornes d'angles et les deux pôles;
+11. deux blocs linéaires rationnels configurables pour les angles et les périmètres des contours intérieur/extérieur;
 12. obstructions translationnelles conjointes élémentaires;
 13. coïncidences forcées sur les contours intérieur et extérieur;
 14. placement symbolique des trois copies dans un repère commun et rejet des auto-coïncidences/recouvrements forcés;
-15. Z3/NLSAT avec une isométrie globale point par point pour chaque copie, uniquement sur les survivants;
+15. couches Z3/NLSAT configurables : fermeture par cordes, cordes-longueurs, puis aires signées avec `A_exterieur = 3 A_interieur`;
 16. écriture des rapports.
 
 L'audit écrit :
@@ -380,9 +380,59 @@ restent en amont comme pré-filtres bon marché.
 Les variables scalaires d'aire ne sont volontairement pas ajoutées à ce LP :
 sans cordes ni déterminants, `A_exterieur = 3*A_interieur` et les bornes
 isopérimétriques restent toujours satisfaisables en choisissant une aire
-positive arbitrairement petite. Les niveaux utiles suivants sont les relaxations
-corde-longueur (LP polyédrique ou SOCP), aire signée relevée (SDP), puis le
-système exact corde/rotation/aire (QF_NRA).
+positive arbitrairement petite.
+
+Le module autonome `global_metric_contour_model.py` construit maintenant la
+couche suivante sans dépendre d'un solveur. Pour chaque variable de courbe, il
+répertorie :
+
+- une longueur d'arc positive `L[X]`;
+- une corde locale `D[X]`;
+- une aire signée d'arc `S[X]`;
+- la phase, la conjugaison et le signe exact de chaque occurrence dans les
+  contours intérieur et extérieur.
+
+`joint_translation_z3.py` compile ce modèle en couches polynomiales imbriquées.
+La couche cordes-longueurs impose :
+
+```text
+L[X] > 0
+perimetre_interieur = perimetre_exterieur = 1
+norme(D[X]) <= L[X]
+```
+
+La couche d'aire ajoute la loi exacte de concaténation de degré deux, la
+positivité de l'aire intérieure et :
+
+```text
+A_exterieur = 3 A_interieur
+```
+
+Les bornes rationnelles utilisent seulement `pi > 3` :
+`|S[X]| <= L[X]^2/3` et `A_interieur <= 1/36`. Elles sont volontairement plus
+faibles que les bornes avec `pi`, mais restent exactes pour le rejet. Les sommes
+d'aire sont encodées par des accumulateurs auxiliaires afin que la taille SMT
+croisse linéairement avec le nombre d'occurrences.
+
+Configuration des couches :
+
+```bat
+rem Désactiver seulement le bloc angulaire linéaire
+py -3 project_cli.py audit --skip-global-angle-filter
+
+rem Désactiver seulement le bloc de périmètres linéaire
+py -3 project_cli.py audit --skip-global-length-filter
+
+rem Garder cordes-longueurs mais retirer l'aire
+py -3 project_cli.py audit --skip-signed-area-layer
+
+rem Revenir au modèle polynomial historique de fermeture seule
+py -3 project_cli.py audit --skip-chord-length-layer
+```
+
+La couche d'aire dépend de la couche cordes-longueurs; désactiver cette dernière
+désactive automatiquement l'aire. `--skip-z3` conserve les rapports et la
+construction des problèmes, mais n'exécute aucun rejet polynomial.
 
 `placed_copy_geometry.py` applique une seule isométrie globale à chaque copie et
 exprime tous ses points distingués dans le même repère que la pièce de

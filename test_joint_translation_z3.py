@@ -41,6 +41,55 @@ class JointTranslationZ3Tests(unittest.TestCase):
         self.assertGreater(problem.distinguished_point_inequality_count, 0)
         self.assertIn("One shared direct/reflected isometry per copy", problem.script_smt2)
 
+
+    def test_metric_and_signed_area_layers_are_enabled_by_default(self):
+        problem = self._problem()
+        self.assertTrue(problem.metric_length_constraints_enabled)
+        self.assertTrue(problem.signed_area_constraints_enabled)
+        self.assertTrue(problem.length_symbol_map)
+        self.assertTrue(problem.arc_area_symbol_map)
+        self.assertIn("Chord/length layer", problem.script_smt2)
+        self.assertIn("Signed-area layer", problem.script_smt2)
+        self.assertIn("external union contains three congruent", problem.script_smt2)
+        self.assertGreater(problem.metric_constraint_count, 0)
+        self.assertGreater(problem.signed_area_constraint_count, 0)
+
+    def test_polynomial_layers_are_independently_configurable(self):
+        case, state = joint.find_voderberg_case_and_state()
+        system = external.build_joint_boundary_system(case, state)
+        placed_analysis = placed.analyze_placed_copy_geometry(case, state, system)
+        metric_only = joint.build_z3_problem(
+            system,
+            placed_geometry_analysis=placed_analysis,
+            enable_metric_lengths=True,
+            enable_signed_areas=False,
+        )
+        self.assertTrue(metric_only.metric_length_constraints_enabled)
+        self.assertFalse(metric_only.signed_area_constraints_enabled)
+        self.assertTrue(metric_only.length_symbol_map)
+        self.assertFalse(metric_only.arc_area_symbol_map)
+
+        closure_only = joint.build_z3_problem(
+            system,
+            placed_geometry_analysis=placed_analysis,
+            enable_metric_lengths=False,
+            enable_signed_areas=False,
+        )
+        self.assertFalse(closure_only.metric_length_constraints_enabled)
+        self.assertFalse(closure_only.signed_area_constraints_enabled)
+        self.assertFalse(closure_only.length_symbol_map)
+        self.assertIn("Homogeneous normalization", closure_only.script_smt2)
+
+    def test_signed_area_requires_metric_layer(self):
+        case, state = joint.find_voderberg_case_and_state()
+        system = external.build_joint_boundary_system(case, state)
+        with self.assertRaises(ValueError):
+            joint.build_z3_problem(
+                system,
+                enable_metric_lengths=False,
+                enable_signed_areas=True,
+            )
+
     def test_missing_z3_is_reported_without_crashing(self):
         problem = self._problem()
         result = joint.run_z3_problem(problem, timeout_ms=10)

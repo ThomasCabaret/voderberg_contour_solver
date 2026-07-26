@@ -401,6 +401,10 @@ def audit(
     canonicalize_solutions: bool = settings.DEFAULT_ENABLE_SOLUTION_CANONICALIZATION,
     reduce_equivalent_profiles: bool = settings.DEFAULT_ENABLE_CANONICAL_PROFILE_REDUCTION,
     reduce_subsumed_profiles: bool = settings.DEFAULT_ENABLE_PROFILE_SUBSUMPTION_REDUCTION,
+    enable_global_linear_angle_filter: bool = settings.DEFAULT_ENABLE_GLOBAL_LINEAR_ANGLE_FILTER,
+    enable_global_linear_length_filter: bool = settings.DEFAULT_ENABLE_GLOBAL_LINEAR_LENGTH_FILTER,
+    enable_chord_length_layer: bool = settings.DEFAULT_ENABLE_CHORD_LENGTH_LAYER,
+    enable_signed_area_layer: bool = settings.DEFAULT_ENABLE_SIGNED_AREA_LAYER,
     voderberg_type_selection: str = settings.DEFAULT_VODERBERG_TYPE_SELECTION,
     collect_profiles: bool = False,
     collect_survivors: bool = False,
@@ -1036,7 +1040,10 @@ def audit(
     for index, work in enumerate(built, start=1):
         try:
             work.global_linear_analysis = global_linear.analyze_global_linear_contours(
-                work.external_system, work.pole_angles
+                work.external_system,
+                work.pole_angles,
+                enable_angle_block=enable_global_linear_angle_filter,
+                enable_length_block=enable_global_linear_length_filter,
             )
             if not work.global_linear_analysis.feasible:
                 global_linear_rejects += 1
@@ -1162,6 +1169,10 @@ def audit(
                 work.external_system,
                 placed_geometry_analysis=work.placed_copy_analysis,
                 require_all_chords_nonzero=settings.Z3_REQUIRE_ALL_CHORDS_NONZERO,
+                enable_metric_lengths=enable_chord_length_layer,
+                enable_signed_areas=(
+                    enable_chord_length_layer and enable_signed_area_layer
+                ),
             )
             z3_counts["z3_problems_generated_for_core_survivors"] += 1
         except NotImplementedError:
@@ -1409,6 +1420,12 @@ def audit(
             "curve_term_specialization_enabled": specialize_curve_terms,
             "positive_length_filter_enabled": apply_positive_length_filter,
             "solution_canonicalization_enabled": canonicalize_solutions,
+            "global_linear_angle_filter_enabled": enable_global_linear_angle_filter,
+            "global_linear_length_filter_enabled": enable_global_linear_length_filter,
+            "chord_length_layer_enabled": enable_chord_length_layer,
+            "signed_area_layer_enabled": bool(
+                enable_chord_length_layer and enable_signed_area_layer
+            ),
             "voderberg_type_selection": normalized_type_selection,
             "exhaustiveness": (
                 "exact partial formal solving on completely constructed supported residual graphs; "
@@ -1451,11 +1468,11 @@ def audit(
             "prototype translation-holonomy obstruction",
             "optional parity diagnostics",
             "shared inner/outer boundary construction",
-            "exact global linear contour filter (inner/outer turns, principal point turns, poles, and normalized perimeters)",
+            "configurable exact global linear contour blocks (inner/outer angles and normalized perimeters)",
             "elementary joint translation filter",
             "forced point coincidence filter on inner/outer boundaries",
             "shared-frame three-copy coincidence and same-side overlap filter",
-            "optional Z3/NLSAT polynomial filter with pointwise global-copy isometries",
+            "optional Z3/NLSAT polynomial layers: closure, chord/length metric constraints, signed inner/outer areas, and pointwise global-copy isometries",
         ],
         "interpretation": {
             "z3_unsat": "Exact for the polynomial relaxation and safe for rejection.",
@@ -1631,6 +1648,29 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable removal of contour-shape profiles absorbed by curve substitution.",
     )
+    parser.add_argument(
+        "--skip-global-angle-filter",
+        action="store_true",
+        help="Disable the exact rational inner/outer angular contour block.",
+    )
+    parser.add_argument(
+        "--skip-global-length-filter",
+        action="store_true",
+        help="Disable the exact rational normalized inner/outer perimeter block.",
+    )
+    parser.add_argument(
+        "--skip-chord-length-layer",
+        action="store_true",
+        help=(
+            "Disable the polynomial chord/length layer. This also disables the "
+            "dependent signed-area layer."
+        ),
+    )
+    parser.add_argument(
+        "--skip-signed-area-layer",
+        action="store_true",
+        help="Disable signed arc areas and the identity A_external = 3*A_inner.",
+    )
     z3_group = parser.add_mutually_exclusive_group()
     z3_group.add_argument("--run-z3", dest="run_z3", action="store_true")
     z3_group.add_argument("--skip-z3", dest="run_z3", action="store_false")
@@ -1757,6 +1797,13 @@ def main() -> int:
         canonicalize_solutions=not args.skip_solution_canonicalization,
         reduce_equivalent_profiles=not args.keep_equivalent_profiles,
         reduce_subsumed_profiles=not args.skip_profile_subsumption,
+        enable_global_linear_angle_filter=not args.skip_global_angle_filter,
+        enable_global_linear_length_filter=not args.skip_global_length_filter,
+        enable_chord_length_layer=not args.skip_chord_length_layer,
+        enable_signed_area_layer=(
+            not args.skip_chord_length_layer
+            and not args.skip_signed_area_layer
+        ),
         collect_profiles=(
             not args.no_profiles_output and not args.no_detailed_profiles_output
         ),
@@ -1795,6 +1842,13 @@ def main() -> int:
                 "family_expansion_max_specializations": args.family_expansion_max_specializations,
                 "curve_term_specialization_enabled": not args.skip_curve_term_specialization,
                 "positive_length_filter_enabled": not args.skip_positive_length_filter,
+                "global_linear_angle_filter_enabled": not args.skip_global_angle_filter,
+                "global_linear_length_filter_enabled": not args.skip_global_length_filter,
+                "chord_length_layer_enabled": not args.skip_chord_length_layer,
+                "signed_area_layer_enabled": bool(
+                    not args.skip_chord_length_layer
+                    and not args.skip_signed_area_layer
+                ),
                 "voderberg_type_selection": voderberg_type_selection,
             },
             "summary": result["formal_equation_audit_summary"],
@@ -1822,6 +1876,13 @@ def main() -> int:
             "curve_term_specialization_enabled": not args.skip_curve_term_specialization,
             "positive_length_filter_enabled": not args.skip_positive_length_filter,
             "solution_canonicalization_enabled": not args.skip_solution_canonicalization,
+            "global_linear_angle_filter_enabled": not args.skip_global_angle_filter,
+            "global_linear_length_filter_enabled": not args.skip_global_length_filter,
+            "chord_length_layer_enabled": not args.skip_chord_length_layer,
+            "signed_area_layer_enabled": bool(
+                not args.skip_chord_length_layer
+                and not args.skip_signed_area_layer
+            ),
             "voderberg_type_selection": voderberg_type_selection,
         }
         # Save the operationally important survivor file first.  A failure while

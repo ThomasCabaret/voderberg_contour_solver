@@ -75,19 +75,33 @@ niveau sans représentation géométrique plus riche.
 ## Restant à étudier
 
 
-### D. Niveaux linéaires et convexes suivants
+### D. Couches métriques polynomiales des deux contours
 
-Statut : **non implémenté**.
+Statut : **implémenté et configurable**.
 
-- relaxations corde-longueur par polygones rationnels extérieurs ou SOCP;
-- fermeture vectorielle des contours intérieur et extérieur;
-- relèvement SDP des produits corde/rotation et des déterminants d'aire;
-- système exact corde/rotation/aire en QF_NRA, seulement après les relaxations
-  précédentes.
+`global_metric_contour_model.py` est un compilateur indépendant du solveur. Il
+construit les occurrences ordonnées des deux contours avec leurs longueurs,
+cordes, phases, conjugaisons et signes d'aire sous inversion/réflexion.
 
-Ces niveaux doivent rester dans des modules séparés. Une relaxation infaisable
-est un certificat de rejet; une relaxation faisable n'est pas une preuve de
-réalisabilité.
+`joint_translation_z3.py` possède maintenant trois niveaux imbriqués :
+
+1. fermeture/rotations historiques;
+2. longueurs d'arc positives, deux périmètres normalisés et `|D[X]| <= L[X]`;
+3. aires signées d'arcs, concaténation exacte de degré deux,
+   `A_int > 0` et `A_ext = 3 A_int`.
+
+Les bornes rationnelles sûres sont `|S[X]| <= L[X]^2/3` et
+`A_int <= 1/36`, conséquences de l'isopérimétrie et de `pi > 3`. Les
+accumulateurs de préfixes évitent le développement quadratique des déterminants.
+
+Une réponse `UNSAT` est un rejet sûr pour la conjonction activée. Une réponse
+`SAT` ne prouve ni la simplicité des contours ni la disjonction des intérieurs.
+
+Restent non implémentés comme pré-filtres moins coûteux :
+
+- relaxation polyédrique rationnelle des disques de cordes;
+- SOCP corde-longueur avec certificats vérifiés;
+- relèvement SDP des produits corde/rotation et des déterminants d'aire.
 
 ### E. Points fixes et classification des isométries
 
@@ -107,17 +121,22 @@ disjonctions des intérieurs comme problème semialgébrique fini.
 
 ### H. Inégalités corde-longueur
 
-Sous une hypothèse explicite de rectifiabilité :
+La contrainte de base `norme(corde) <= longueur` est maintenant encodée dans la
+couche polynomialement exacte. Restent à étudier :
 
-- `norme(corde) <= longueur`;
-- inégalités polygonales strictes pour une boucle non dégénérée;
+- pré-relaxations LP/SOCP plus rapides;
+- contraintes supplémentaires sur des sous-arcs distingués;
 - contradictions entre un sous-arc propre et un arc congruent qui le contient.
 
 ### I. Aire orientée et moments
 
-Ajouter progressivement aire, barycentre et moments quadratiques comme
-invariants de concaténation. Leur gain doit être mesuré après l'imposition des
-isométries globales, car certaines égalités deviennent alors automatiques.
+L'aire orientée de niveau deux est maintenant encodée pour les deux contours,
+avec les variables libres d'aire d'arc et `A_ext = 3 A_int`. Restent :
+
+- mesure du gain éliminatif sur les profils survivants;
+- relaxation SDP plus rapide;
+- barycentre et moments quadratiques;
+- niveaux supérieurs de signature si le niveau deux reste insuffisant.
 
 ### J. Réduction topologique avant les équations de mots
 

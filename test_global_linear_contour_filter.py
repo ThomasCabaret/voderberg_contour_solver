@@ -78,6 +78,31 @@ class GlobalLinearContourFilterTests(unittest.TestCase):
             dict(analysis.outer_perimeter_coefficients),
         )
 
+
+    def test_linear_blocks_can_be_disabled_independently(self):
+        case, state = joint_translation_z3.find_voderberg_case_and_state()
+        system = external.build_joint_boundary_system(case, state)
+        pole_analysis = poles.analyze_pole_angles(case, state)
+        angle_only = global_linear.analyze_global_linear_contours(
+            system,
+            pole_analysis,
+            enable_angle_block=True,
+            enable_length_block=False,
+        )
+        self.assertTrue(angle_only.feasible)
+        self.assertTrue(angle_only.angle_block_enabled)
+        self.assertFalse(angle_only.length_block_enabled)
+        self.assertEqual(angle_only.length_block.status, "length_block_disabled")
+
+        disabled = global_linear.analyze_global_linear_contours(
+            system,
+            pole_analysis,
+            enable_angle_block=False,
+            enable_length_block=False,
+        )
+        self.assertTrue(disabled.feasible)
+        self.assertEqual(disabled.status, "all_linear_blocks_disabled")
+
     def test_composite_external_turn_must_be_principal(self):
         theta = "Theta0"
         inner = self._boundary(

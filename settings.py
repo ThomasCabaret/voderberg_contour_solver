@@ -29,6 +29,14 @@ DEFAULT_ENABLE_SOLUTION_CANONICALIZATION = True
 DEFAULT_ENABLE_CANONICAL_PROFILE_REDUCTION = True
 DEFAULT_ENABLE_PROFILE_SUBSUMPTION_REDUCTION = True
 
+# Global decorated-contour feasibility layers.  The exact rational angular and
+# length blocks can be toggled independently.  The polynomial layers are
+# hierarchical: signed area requires the chord/length layer.
+DEFAULT_ENABLE_GLOBAL_LINEAR_ANGLE_FILTER = True
+DEFAULT_ENABLE_GLOBAL_LINEAR_LENGTH_FILTER = True
+DEFAULT_ENABLE_CHORD_LENGTH_LAYER = True
+DEFAULT_ENABLE_SIGNED_AREA_LAYER = True
+
 # Exact partial formal solver.  The residual graph must be complete before any
 # result is labelled exact.  Only finite and fixed-context power cycles are
 # compiled for downstream use; more general morphic SCCs remain explicit.
