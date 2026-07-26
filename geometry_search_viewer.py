@@ -25,7 +25,10 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 import numpy as np
 from scipy.optimize import differential_evolution
 
+import curve_template_constraints as template_constraints
+import curve_term_solver
 import geometry_checkpoint
+import voderberg_type_classifier as voderberg_types
 import settings
 
 
@@ -52,6 +55,9 @@ class SearchProfile:
     free_angles: Tuple[str, ...]
     curve_variables: Tuple[str, ...]
     kappa_assignments: Mapping[str, str]
+    terminal_mapping: Optional[Mapping[str, object]] = None
+    curve_term_solution: Optional[Mapping[str, object]] = None
+    compatible_voderberg_types: Tuple[str, ...] = ()
 
 
 @dataclass
@@ -70,6 +76,11 @@ class CandidateGeometry:
     intermediate_points_per_variable: int
     curve_lengths: Dict[str, Tuple[float, ...]]
     curve_internal_turns: Dict[str, Tuple[float, ...]]
+    effective_intermediate_points: Dict[str, int]
+    template_constraint_plan: Mapping[str, object]
+    curve_term_solution: Mapping[str, object]
+    template_constraint_max_error: float
+    compatible_voderberg_types: Tuple[str, ...]
 
     def to_dict(self) -> Dict[str, object]:
         return {
@@ -91,16 +102,27 @@ class CandidateGeometry:
             "curve_internal_turns": {
                 name: list(values) for name, values in self.curve_internal_turns.items()
             },
+            "effective_intermediate_points_by_variable": dict(
+                self.effective_intermediate_points
+            ),
+            "contact_template_constraints": dict(self.template_constraint_plan),
+            "curve_term_solution": dict(self.curve_term_solution),
+            "contact_template_constraint_max_error": self.template_constraint_max_error,
+            "voderberg_type": {
+                "compatible_types": list(self.compatible_voderberg_types),
+                "classification_level": "formal_contact_topology",
+            },
             "model": {
                 "curve_template": (
-                    f"polyline with {self.intermediate_points_per_variable} intermediate "
-                    f"point(s) per formal variable"
+                    f"up to {self.intermediate_points_per_variable} intermediate "
+                    f"point(s) per formal variable, reduced by exact contact symmetries"
                 ),
                 "status": "heuristic geometric candidate",
                 "limitations": (
-                    "This certifies only the displayed prototype contour in the "
-                    "restricted template model. It does not yet certify the full "
-                    "three-copy non-overlap realization."
+                    "This certifies the displayed prototype contour and exact local "
+                    "curve-template compatibility for every terminal contact pair in "
+                    "the restricted polygonal model. It does not yet certify full "
+                    "three-copy non-overlap or absence of parasitic contacts."
                 ),
             },
         }
@@ -117,7 +139,11 @@ def _parse_occurrences(word_contour: str) -> Tuple[SegmentOccurrence, ...]:
     return tuple(output)
 
 
-def _extract_profile(record: Mapping[str, object]) -> SearchProfile:
+def _extract_profile(
+    record: Mapping[str, object],
+    *,
+    require_terminal_mapping: bool,
+) -> SearchProfile:
     solution = record["solution"]
     formal = solution["formal_profile"]
     occurrences = _parse_occurrences(solution["word_contour"])
@@ -135,6 +161,25 @@ def _extract_profile(record: Mapping[str, object]) -> SearchProfile:
         variable: str(assignments.get(variable, f"Kappa[{variable}]"))
         for variable in curve_variables
     }
+    type_payload = record.get("voderberg_type")
+    compatible_types: Tuple[str, ...] = ()
+    if isinstance(type_payload, Mapping):
+        raw_types = type_payload.get("compatible_types", ())
+        if isinstance(raw_types, Sequence) and not isinstance(raw_types, (str, bytes)):
+            compatible_types = tuple(str(item) for item in raw_types)
+    terminal_mapping = record.get("terminal_mapping")
+    if require_terminal_mapping:
+        if not isinstance(terminal_mapping, Mapping):
+            raise ValueError(
+                f"Profile {record.get('profile_id')} has no terminal_mapping. "
+                "Rerun the audit with the current patch before geometric search, "
+                "or use --skip-contact-template-constraints only for legacy debugging."
+            )
+        if terminal_mapping.get("status") == "error":
+            raise ValueError(
+                f"Profile {record.get('profile_id')} has an invalid terminal_mapping: "
+                f"{terminal_mapping.get('error')}"
+            )
     return SearchProfile(
         profile_id=int(record["profile_id"]),
         case_id=int(record["case_id"]),
@@ -144,6 +189,13 @@ def _extract_profile(record: Mapping[str, object]) -> SearchProfile:
         free_angles=tuple(str(item) for item in formal["free_angle_parameters"]),
         curve_variables=curve_variables,
         kappa_assignments=normalized_assignments,
+        terminal_mapping=(terminal_mapping if isinstance(terminal_mapping, Mapping) else None),
+        curve_term_solution=(
+            record.get("curve_term_solution")
+            if isinstance(record.get("curve_term_solution"), Mapping)
+            else None
+        ),
+        compatible_voderberg_types=compatible_types,
     )
 
 
@@ -222,8 +274,28 @@ def _iter_top_level_array(
             position = 0
 
 
-def load_survivors(path: Path) -> List[SearchProfile]:
-    return [_extract_profile(record) for record in _iter_top_level_array(path, "profiles")]
+def load_survivors(
+    path: Path,
+    *,
+    voderberg_type_selection: str = settings.DEFAULT_VODERBERG_TYPE_SELECTION,
+    enforce_contact_template_constraints: bool = True,
+) -> List[SearchProfile]:
+    normalized_selection = voderberg_types.normalize_selection(
+        voderberg_type_selection
+    )
+    output: List[SearchProfile] = []
+    for record in _iter_top_level_array(path, "profiles"):
+        if not voderberg_types.record_matches_selection(
+            record, normalized_selection
+        ):
+            continue
+        output.append(
+            _extract_profile(
+                record,
+                require_terminal_mapping=enforce_contact_template_constraints,
+            )
+        )
+    return output
 
 
 def _signed_name(expression: str) -> Tuple[int, Optional[str]]:
@@ -257,60 +329,188 @@ def _free_internal_turn_count(intermediate_points: int) -> int:
     return max(0, _edge_count(intermediate_points) - 2)
 
 
+def _curve_terms(
+    profile: SearchProfile,
+    *,
+    enforce_contact_template_constraints: bool,
+) -> curve_term_solver.CurveTermSolution:
+    return curve_term_solver.solve_curve_terms(
+        curve_variables=profile.curve_variables,
+        occurrences=profile.occurrences,
+        terminal_mapping=profile.terminal_mapping,
+        enabled=enforce_contact_template_constraints,
+    )
+
+
+def _validate_curve_model(
+    formal: curve_term_solver.CurveTermSolution,
+    numeric: template_constraints.TemplatePlan,
+) -> None:
+    """Verify that the polygonal compiler implements the formal curve terms."""
+
+    formal_components = {
+        component.representative: component
+        for component in formal.relation_analysis.components
+    }
+    numeric_components = {
+        component.representative: component
+        for component in numeric.components
+    }
+    if set(formal_components) != set(numeric_components):
+        raise RuntimeError(
+            "Formal curve terms and polygonal compiler disagree on component representatives"
+        )
+    for representative, formal_component in formal_components.items():
+        numeric_component = numeric_components[representative]
+        if formal_component.mode != numeric_component.mode:
+            raise RuntimeError(
+                "Formal curve terms and polygonal compiler disagree for "
+                f"{representative}: {formal_component.mode} != {numeric_component.mode}"
+            )
+        if tuple(formal_component.variables) != tuple(numeric_component.variables):
+            raise RuntimeError(
+                f"Formal and numeric curve components differ for {representative}"
+            )
+        for variable in formal_component.variables:
+            formal_transform = formal_component.transforms[variable].label
+            numeric_transform = numeric_component.transforms[variable].label
+            if formal_transform != numeric_transform:
+                raise RuntimeError(
+                    "Formal curve terms and polygonal compiler disagree on "
+                    f"{variable}: {formal_transform} != {numeric_transform}"
+                )
+
+        # A formal Straight(lambda) value has no artificial internal vertex.
+        if formal_component.mode == "straight":
+            if numeric_component.effective_edge_count != 1:
+                raise RuntimeError(
+                    f"Straight component {representative} was not reduced to one edge"
+                )
+            if numeric_component.free_turn_count != 0:
+                raise RuntimeError(
+                    f"Straight component {representative} still has turn parameters"
+                )
+
+
+def _validate_exported_curve_terms(
+    profile: SearchProfile,
+    formal: curve_term_solver.CurveTermSolution,
+) -> None:
+    """Reject stale audit data whose formal terms differ from recomputation."""
+
+    exported = profile.curve_term_solution
+    if exported is None or not formal.enabled:
+        return
+    exported_terms = exported.get("terms")
+    if not isinstance(exported_terms, Mapping):
+        raise ValueError(
+            f"Profile {profile.profile_id} has no usable curve_term_solution. "
+            "Rerun the audit with the current patch."
+        )
+    expected_text = {
+        variable: str(term.get("text", term.get("kind", "")))
+        for variable, term in formal.terms.items()
+    }
+    exported_text = {
+        str(variable): str(term.get("text", term.get("kind", "")))
+        for variable, term in exported_terms.items()
+        if isinstance(term, Mapping)
+    }
+    if expected_text != exported_text:
+        raise ValueError(
+            f"Profile {profile.profile_id} contains stale curve terms. "
+            "Rerun the audit before geometric search."
+        )
+
+
+def _template_plan(
+    profile: SearchProfile,
+    intermediate_points: int,
+    *,
+    enforce_contact_template_constraints: bool,
+) -> template_constraints.TemplatePlan:
+    formal = _curve_terms(
+        profile,
+        enforce_contact_template_constraints=enforce_contact_template_constraints,
+    )
+    numeric = template_constraints.build_plan(
+        curve_variables=profile.curve_variables,
+        occurrences=profile.occurrences,
+        terminal_mapping=profile.terminal_mapping,
+        kappa_assignments=profile.kappa_assignments,
+        intermediate_points=intermediate_points,
+        enabled=enforce_contact_template_constraints,
+    )
+    _validate_curve_model(formal, numeric)
+    _validate_exported_curve_terms(profile, formal)
+    return numeric
+
+
 def _decode_parameters(
     profile: SearchProfile,
     values: Sequence[float],
     intermediate_points: int,
+    template_plan: Optional[template_constraints.TemplatePlan] = None,
 ) -> Tuple[
     Dict[str, Tuple[float, ...]],
     Dict[str, Tuple[float, ...]],
     Dict[str, float],
     Dict[str, float],
 ]:
-    cursor = 0
-    edge_count = _edge_count(intermediate_points)
-    free_turn_count = _free_internal_turn_count(intermediate_points)
-    lengths: Dict[str, Tuple[float, ...]] = {}
-    shape_turns: Dict[str, Tuple[float, ...]] = {}
-    for variable in profile.curve_variables:
-        lengths[variable] = tuple(
-            float(values[cursor + offset]) for offset in range(edge_count)
-        )
-        cursor += edge_count
-        shape_turns[variable] = tuple(
-            float(values[cursor + offset]) for offset in range(free_turn_count)
-        )
-        cursor += free_turn_count
+    plan = template_plan or _template_plan(
+        profile,
+        intermediate_points,
+        enforce_contact_template_constraints=False,
+    )
+    cursor = plan.curve_parameter_count
     angles = {
         name: float(values[cursor + index])
         for index, name in enumerate(profile.free_angles)
     }
     cursor += len(profile.free_angles)
-    kappa_classes = _kappa_classes(profile)
-    if edge_count == 1:
-        kappas = {name: 0.0 for name in kappa_classes}
-    else:
-        kappas = {
-            name: float(values[cursor + index])
-            for index, name in enumerate(kappa_classes)
-        }
-    return lengths, shape_turns, angles, kappas
+    reduced_kappas = {
+        name: float(values[cursor + index])
+        for index, name in enumerate(plan.kappa_parameter_names)
+    }
+    decoded = template_constraints.decode_templates(
+        plan,
+        profile.kappa_assignments,
+        values,
+        start=0,
+        kappa_values=reduced_kappas,
+    )
+    return (
+        dict(decoded.lengths),
+        dict(decoded.turns),
+        angles,
+        dict(reduced_kappas),
+    )
 
 
-def _bounds(profile: SearchProfile, intermediate_points: int) -> List[Tuple[float, float]]:
+def _bounds(
+    profile: SearchProfile,
+    intermediate_points: int,
+    template_plan: Optional[template_constraints.TemplatePlan] = None,
+) -> List[Tuple[float, float]]:
+    plan = template_plan or _template_plan(
+        profile,
+        intermediate_points,
+        enforce_contact_template_constraints=False,
+    )
     bounds: List[Tuple[float, float]] = []
-    edge_count = _edge_count(intermediate_points)
-    free_turn_count = _free_internal_turn_count(intermediate_points)
     angular_bound = math.pi - settings.GEOMETRY_ANGLE_MARGIN
-    for _variable in profile.curve_variables:
+    for component in plan.components:
         bounds.extend(
             [(settings.GEOMETRY_LENGTH_MIN, settings.GEOMETRY_LENGTH_MAX)]
-            * edge_count
+            * component.free_length_count
         )
-        bounds.extend([(-angular_bound, angular_bound)] * free_turn_count)
+        bounds.extend(
+            [(-angular_bound, angular_bound)] * component.free_turn_count
+        )
     bounds.extend([(-angular_bound, angular_bound)] * len(profile.free_angles))
-    if edge_count > 1:
-        bounds.extend([(-angular_bound, angular_bound)] * len(_kappa_classes(profile)))
+    bounds.extend(
+        [(-angular_bound, angular_bound)] * len(plan.kappa_parameter_names)
+    )
     return bounds
 
 
@@ -321,24 +521,10 @@ def _expression_value(expression: str, values: Mapping[str, float]) -> float:
     return sign * values[name]
 
 
-def _curve_kappa(profile: SearchProfile, variable: str, class_values: Mapping[str, float]) -> float:
-    return _expression_value(profile.kappa_assignments[variable], class_values)
-
-
 def _rotate(vector: Point, angle: float) -> Point:
     c = math.cos(angle)
     s = math.sin(angle)
     return c * vector[0] - s * vector[1], s * vector[0] + c * vector[1]
-
-
-def _positive_internal_turns(
-    kappa: float,
-    free_turns: Sequence[float],
-    edge_count: int,
-) -> Tuple[float, ...]:
-    if edge_count == 1:
-        return ()
-    return tuple(free_turns) + (kappa - sum(free_turns),)
 
 
 def _oriented_template(
@@ -355,6 +541,7 @@ def _simulate(
     profile: SearchProfile,
     values: Sequence[float],
     intermediate_points: int,
+    template_plan: Optional[template_constraints.TemplatePlan] = None,
 ) -> Tuple[
     List[Point],
     List[Dict[str, object]],
@@ -364,18 +551,9 @@ def _simulate(
     Dict[str, Tuple[float, ...]],
     Dict[str, Tuple[float, ...]],
 ]:
-    lengths, shape_turns, angle_values, kappa_values = _decode_parameters(
-        profile, values, intermediate_points
+    lengths, template_turns, angle_values, kappa_values = _decode_parameters(
+        profile, values, intermediate_points, template_plan
     )
-    edge_count = _edge_count(intermediate_points)
-    positive_turns = {
-        variable: _positive_internal_turns(
-            _curve_kappa(profile, variable, kappa_values),
-            shape_turns[variable],
-            edge_count,
-        )
-        for variable in profile.curve_variables
-    }
     vertices: List[Point] = [(0.0, 0.0)]
     metadata: List[Dict[str, object]] = []
     position = (0.0, 0.0)
@@ -385,7 +563,7 @@ def _simulate(
     for occurrence_index, occurrence in enumerate(profile.occurrences):
         occurrence_lengths, occurrence_turns = _oriented_template(
             lengths[occurrence.variable],
-            positive_turns[occurrence.variable],
+            template_turns[occurrence.variable],
             occurrence.inverse,
         )
         first_vertex_index = len(vertices) - 1
@@ -423,7 +601,7 @@ def _simulate(
         angle_values,
         kappa_values,
         lengths,
-        positive_turns,
+        template_turns,
     )
 
 
@@ -492,6 +670,7 @@ def _metrics(
     profile: SearchProfile,
     values: Sequence[float],
     intermediate_points: int,
+    template_plan: Optional[template_constraints.TemplatePlan] = None,
 ) -> Tuple[
     float,
     float,
@@ -512,7 +691,7 @@ def _metrics(
         kappas,
         lengths,
         internal_turns,
-    ) = _simulate(profile, values, intermediate_points)
+    ) = _simulate(profile, values, intermediate_points, template_plan)
     closure = math.hypot(
         vertices[-1][0] - vertices[0][0],
         vertices[-1][1] - vertices[0][1],
@@ -538,9 +717,10 @@ def _objective(
     profile: SearchProfile,
     values: Sequence[float],
     intermediate_points: int,
+    template_plan: Optional[template_constraints.TemplatePlan] = None,
 ) -> float:
     closure, turn_error, area, intersections, *_rest = _metrics(
-        profile, values, intermediate_points
+        profile, values, intermediate_points, template_plan
     )
     area_deficit = max(0.0, settings.GEOMETRY_MIN_ABS_AREA - area)
     return (
@@ -556,6 +736,7 @@ def _valid_candidate(
     values: Sequence[float],
     objective: float,
     intermediate_points: int,
+    template_plan: Optional[template_constraints.TemplatePlan] = None,
 ) -> Optional[CandidateGeometry]:
     (
         closure,
@@ -568,7 +749,7 @@ def _valid_candidate(
         kappas,
         lengths,
         internal_turns,
-    ) = _metrics(profile, values, intermediate_points)
+    ) = _metrics(profile, values, intermediate_points, template_plan)
     if closure > settings.GEOMETRY_CLOSURE_TOLERANCE:
         return None
     if turn_error > settings.GEOMETRY_TURN_TOLERANCE:
@@ -576,6 +757,16 @@ def _valid_candidate(
     if area <= settings.GEOMETRY_MIN_ABS_AREA:
         return None
     if intersections:
+        return None
+    plan = template_plan or _template_plan(
+        profile,
+        intermediate_points,
+        enforce_contact_template_constraints=False,
+    )
+    relation_error = template_constraints.max_relation_error(
+        plan, lengths, internal_turns
+    )
+    if relation_error > settings.GEOMETRY_TEMPLATE_CONSTRAINT_TOLERANCE:
         return None
     vertices[-1] = vertices[0]
     return CandidateGeometry(
@@ -593,6 +784,17 @@ def _valid_candidate(
         intermediate_points_per_variable=intermediate_points,
         curve_lengths=lengths,
         curve_internal_turns=internal_turns,
+        effective_intermediate_points={
+            variable: max(0, len(lengths[variable]) - 1)
+            for variable in profile.curve_variables
+        },
+        template_constraint_plan=plan.to_dict(),
+        curve_term_solution=_curve_terms(
+            profile,
+            enforce_contact_template_constraints=plan.enabled,
+        ).to_dict(),
+        template_constraint_max_error=relation_error,
+        compatible_voderberg_types=profile.compatible_voderberg_types,
     )
 
 
@@ -604,14 +806,22 @@ def search_profile(
     max_iterations: int,
     population_size: int,
     seed: int,
+    enforce_contact_template_constraints: bool = True,
 ) -> Optional[CandidateGeometry]:
-    bounds = _bounds(profile, intermediate_points)
+    template_plan = _template_plan(
+        profile,
+        intermediate_points,
+        enforce_contact_template_constraints=enforce_contact_template_constraints,
+    )
+    bounds = _bounds(profile, intermediate_points, template_plan)
     if not bounds:
         return None
     best: Optional[CandidateGeometry] = None
     for attempt in range(attempts):
         result = differential_evolution(
-            lambda values: _objective(profile, values, intermediate_points),
+            lambda values: _objective(
+                profile, values, intermediate_points, template_plan
+            ),
             bounds,
             maxiter=max_iterations,
             popsize=population_size,
@@ -626,6 +836,7 @@ def search_profile(
             result.x,
             float(result.fun),
             intermediate_points,
+            template_plan,
         )
         if candidate is not None and (
             best is None or candidate.objective < best.objective
@@ -664,6 +875,7 @@ def search_profiles(
     max_iterations: int,
     population_size: int,
     seed: int,
+    enforce_contact_template_constraints: bool = True,
 ) -> List[CandidateGeometry]:
     selected = select_profiles(profiles, max_profiles=max_profiles)
     candidates: List[CandidateGeometry] = []
@@ -681,6 +893,7 @@ def search_profiles(
             max_iterations=max_iterations,
             population_size=population_size,
             seed=seed,
+            enforce_contact_template_constraints=enforce_contact_template_constraints,
         )
         if candidate is None:
             print("      no candidate found in the configured search", flush=True)
@@ -851,8 +1064,10 @@ def launch_viewer(candidates: Sequence[Mapping[str, object]]) -> None:
             f"Closure error: {candidate['closure_error']:.6g}\n"
             f"Turn error: {candidate['turn_error']:.6g}\n"
             f"Signed area: {candidate['signed_area']:.6g}\n"
-            f"Intermediate points per variable: "
-            f"{candidate.get('intermediate_points_per_variable', 1)}\n\n"
+            f"Requested maximum intermediate points: "
+            f"{candidate.get('intermediate_points_per_variable', 1)}\n"
+            f"Effective intermediate points: "
+            f"{candidate.get('effective_intermediate_points_by_variable', {})}\n\n"
             "Solid = forward occurrence\n"
             "Dashed = inverse occurrence\n\n"
             "Angle values (radians):\n"
@@ -891,13 +1106,37 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum number of survivor profiles to search; 0 means all profiles (default).",
     )
     parser.add_argument(
+        "--voderberg-types",
+        default=settings.DEFAULT_VODERBERG_TYPE_SELECTION,
+        metavar="SELECTION",
+        help=(
+            "Filter an existing survivor file by formal Voderberg compatibility: "
+            "all, type1, type2, or type1+type2."
+        ),
+    )
+    parser.add_argument(
         "--intermediate-points",
         type=int,
         default=settings.GEOMETRY_DEFAULT_INTERMEDIATE_POINTS,
         help=(
-            "Number of interior polyline vertices used for every formal curve "
-            "variable. 0 means one straight edge, 1 means two edges, etc."
+            "Maximum number of interior polyline vertices requested per formal "
+            "curve variable. Contact symmetries may reduce a variable to fewer "
+            "vertices; 0 always means one straight edge."
         ),
+    )
+    parser.add_argument(
+        "--skip-contact-template-constraints",
+        dest="enforce_contact_template_constraints",
+        action="store_false",
+        help=(
+            "Disable exact propagation of terminal copy mappings to polyline "
+            "templates. Legacy/debugging only; may reintroduce false positives."
+        ),
+    )
+    parser.set_defaults(
+        enforce_contact_template_constraints=(
+            settings.GEOMETRY_ENFORCE_CONTACT_TEMPLATE_CONSTRAINTS
+        )
     )
     parser.add_argument("--attempts", type=int, default=settings.GEOMETRY_DEFAULT_ATTEMPTS_PER_PROFILE)
     parser.add_argument("--max-iterations", type=int, default=settings.GEOMETRY_DEFAULT_MAX_ITERATIONS)
@@ -946,6 +1185,12 @@ def _checkpoint_configuration(args: argparse.Namespace) -> Dict[str, object]:
         "population_size": max(2, int(args.population_size)),
         "seed": int(args.seed),
         "max_profiles": int(args.max_profiles),
+        "voderberg_type_selection": voderberg_types.normalize_selection(args.voderberg_types),
+        "contact_template_constraints_enabled": bool(
+            args.enforce_contact_template_constraints
+        ),
+        "contact_template_constraint_schema": template_constraints.SCHEMA_VERSION,
+        "curve_term_solution_schema": curve_term_solver.SCHEMA_VERSION,
     }
 
 
@@ -1016,6 +1261,9 @@ def _run_transactional_search(
                         max_iterations=max(1, args.max_iterations),
                         population_size=max(2, args.population_size),
                         seed=args.seed,
+                        enforce_contact_template_constraints=(
+                            args.enforce_contact_template_constraints
+                        ),
                     )
                 except KeyboardInterrupt:
                     raise
@@ -1095,11 +1343,30 @@ def main() -> int:
         print("--fresh requires transactional resume/checkpoint mode", file=sys.stderr)
         return 2
 
-    profiles = load_survivors(args.input)
+    try:
+        normalized_type_selection = voderberg_types.normalize_selection(
+            args.voderberg_types
+        )
+        profiles = load_survivors(
+            args.input,
+            voderberg_type_selection=normalized_type_selection,
+            enforce_contact_template_constraints=(
+                args.enforce_contact_template_constraints
+            ),
+        )
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     selected = select_profiles(profiles, max_profiles=args.max_profiles)
     print(
-        f"Loaded {len(profiles)} surviving profiles from {args.input}; "
+        f"Loaded {len(profiles)} profiles matching Voderberg selection "
+        f"{normalized_type_selection} from {args.input}; "
         f"selected {len(selected)} for this run",
+        flush=True,
+    )
+    print(
+        "Contact-induced curve-template constraints: "
+        + ("enabled" if args.enforce_contact_template_constraints else "DISABLED (legacy/debug mode)"),
         flush=True,
     )
 
@@ -1124,6 +1391,9 @@ def main() -> int:
             max_iterations=max(1, args.max_iterations),
             population_size=max(2, args.population_size),
             seed=args.seed,
+            enforce_contact_template_constraints=(
+                args.enforce_contact_template_constraints
+            ),
         )
         candidates = [candidate.to_dict() for candidate in found]
         search_summary = {

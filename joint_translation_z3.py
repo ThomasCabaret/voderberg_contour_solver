@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 import external_boundary_constraints as external
+import placed_copy_geometry as placed_geometry
 import settings
 import symbolic_enumerator as base
 
@@ -44,6 +45,9 @@ class Z3Problem:
     chord_symbol_map: Tuple[Tuple[str, Tuple[str, str]], ...]
     rotation_equation_count: int
     translation_equation_count: int
+    contact_point_equation_count: int
+    distinguished_point_inequality_count: int
+    global_isometry_enforced: bool
     require_all_chords_nonzero: bool
     relaxation_notes: Tuple[str, ...]
 
@@ -59,6 +63,9 @@ class Z3Problem:
             },
             "rotation_equation_count": self.rotation_equation_count,
             "translation_equation_count": self.translation_equation_count,
+            "contact_point_equation_count": self.contact_point_equation_count,
+            "distinguished_point_inequality_count": self.distinguished_point_inequality_count,
+            "global_isometry_enforced": self.global_isometry_enforced,
             "require_all_chords_nonzero": self.require_all_chords_nonzero,
             "relaxation_notes": list(self.relaxation_notes),
         }
@@ -173,7 +180,25 @@ def _complex_power(item: ComplexExpr, exponent: int) -> ComplexExpr:
     return result
 
 
-def _all_angle_variables(system: external.JointBoundarySystem) -> Tuple[str, ...]:
+def _vector_angle_variables(expression: object) -> set[str]:
+    return {
+        variable
+        for basis, _coefficient in getattr(expression, "terms")
+        for variable, _value in basis.phase.coefficients
+    }
+
+
+def _vector_chord_variables(expression: object) -> set[str]:
+    return {
+        basis.curve_variable
+        for basis, _coefficient in getattr(expression, "terms")
+    }
+
+
+def _all_angle_variables(
+    system: external.JointBoundarySystem,
+    placed: Optional[placed_geometry.PlacedCopyGeometryAnalysis] = None,
+) -> Tuple[str, ...]:
     names = {
         variable
         for equation in system.rotation_equations
@@ -186,15 +211,35 @@ def _all_angle_variables(system: external.JointBoundarySystem) -> Tuple[str, ...
         for phase_item in coefficient.phases
         for variable, _coefficient in phase_item.phase.coefficients
     )
+    if placed is not None:
+        for equation in placed.contact_point_equations:
+            names.update(_vector_angle_variables(equation.reference_position))
+            names.update(_vector_angle_variables(equation.copy_position))
+        reference_points = [
+            point for point in placed.points if point.copy == placed_geometry.REFERENCE
+        ]
+        for point in reference_points:
+            names.update(_vector_angle_variables(point.expression))
     return tuple(sorted(names))
 
 
-def _all_chord_variables(system: external.JointBoundarySystem) -> Tuple[str, ...]:
-    return tuple(sorted({
+def _all_chord_variables(
+    system: external.JointBoundarySystem,
+    placed: Optional[placed_geometry.PlacedCopyGeometryAnalysis] = None,
+) -> Tuple[str, ...]:
+    names = {
         coefficient.chord.variable
         for equation in system.translation_equations
         for coefficient in equation.coefficients
-    }))
+    }
+    if placed is not None:
+        for equation in placed.contact_point_equations:
+            names.update(_vector_chord_variables(equation.reference_position))
+            names.update(_vector_chord_variables(equation.copy_position))
+        for point in placed.points:
+            if point.copy == placed_geometry.REFERENCE:
+                names.update(_vector_chord_variables(point.expression))
+    return tuple(sorted(names))
 
 
 def _require_integral_angle_form(form: external.AngleForm, context: str) -> None:
@@ -255,9 +300,38 @@ def _translation_expression(
     return total
 
 
+def _vector_expression(
+    expression: object,
+    angle_symbols: Mapping[str, Tuple[str, str]],
+    chord_symbols: Mapping[str, Tuple[str, str]],
+) -> ComplexExpr:
+    total = ComplexExpr("0", "0")
+    for basis, coefficient in getattr(expression, "terms"):
+        x_symbol, y_symbol = chord_symbols[basis.curve_variable]
+        chord = ComplexExpr(x_symbol, y_symbol)
+        if basis.conjugated:
+            chord = _complex_conjugate(chord)
+        phase = external.AngleForm(
+            coefficients=tuple(basis.phase.coefficients),
+            pi_constant=basis.phase.pi_constant,
+        )
+        term = _complex_mul(_phasor(phase, angle_symbols), chord)
+        total = _complex_add(total, _complex_scale(coefficient, term))
+    return total
+
+
+def _complex_subtract(left: ComplexExpr, right: ComplexExpr) -> ComplexExpr:
+    return ComplexExpr(_add((left.real, _neg(right.real))), _add((left.imag, _neg(right.imag))))
+
+
+def _squared_norm(item: ComplexExpr) -> str:
+    return _add((_mul((item.real, item.real)), _mul((item.imag, item.imag))))
+
+
 def build_z3_problem(
     system: external.JointBoundarySystem,
     *,
+    placed_geometry_analysis: Optional[placed_geometry.PlacedCopyGeometryAnalysis] = None,
     require_all_chords_nonzero: bool = settings.Z3_REQUIRE_ALL_CHORDS_NONZERO,
 ) -> Z3Problem:
     """Build a polynomial QF_NRA relaxation for Z3/NLSAT.
@@ -267,8 +341,8 @@ def build_z3_problem(
     principal-angle interval information.  This makes the formula weaker than
     the full angle model, so an ``unsat`` result remains a sound discard.
     """
-    angle_variables = _all_angle_variables(system)
-    chord_variables = _all_chord_variables(system)
+    angle_variables = _all_angle_variables(system, placed_geometry_analysis)
+    chord_variables = _all_chord_variables(system, placed_geometry_analysis)
     angle_symbols = {
         name: (_safe_symbol("rot_c", index), _safe_symbol("rot_s", index))
         for index, name in enumerate(angle_variables)
@@ -316,6 +390,48 @@ def build_z3_problem(
         lines.append(f"(assert (= {expression.real} 0))")
         lines.append(f"(assert (= {expression.imag} 0))")
 
+    contact_point_equation_count = 0
+    distinguished_point_inequality_count = 0
+    if placed_geometry_analysis is not None:
+        lines.append("; One shared direct/reflected isometry per copy, enforced pointwise")
+        for equation in placed_geometry_analysis.contact_point_equations:
+            reference_position = _vector_expression(
+                equation.reference_position, angle_symbols, chord_symbols
+            )
+            copy_position = _vector_expression(
+                equation.copy_position, angle_symbols, chord_symbols
+            )
+            residual = _complex_subtract(reference_position, copy_position)
+            lines.append(
+                f"; Contact {equation.projection}[{equation.boundary_index}]: "
+                f"{equation.reference_label} = {equation.copy_label}"
+            )
+            lines.append(f"(assert (= {residual.real} 0))")
+            lines.append(f"(assert (= {residual.imag} 0))")
+            contact_point_equation_count += 1
+
+        reference_points = [
+            point
+            for point in placed_geometry_analysis.points
+            if point.copy == placed_geometry.REFERENCE
+        ]
+        for left_index in range(len(reference_points)):
+            for right_index in range(left_index + 1, len(reference_points)):
+                left = _vector_expression(
+                    reference_points[left_index].expression, angle_symbols, chord_symbols
+                )
+                right = _vector_expression(
+                    reference_points[right_index].expression, angle_symbols, chord_symbols
+                )
+                residual = _complex_subtract(left, right)
+                lines.append(
+                    "; Distinct prototype cut points cannot coincide: "
+                    f"{reference_points[left_index].label} != "
+                    f"{reference_points[right_index].label}"
+                )
+                lines.append(f"(assert (> {_squared_norm(residual)} 0))")
+                distinguished_point_inequality_count += 1
+
     norms: List[str] = []
     for name in chord_variables:
         x_symbol, y_symbol = chord_symbols[name]
@@ -340,11 +456,19 @@ def build_z3_problem(
         chord_symbol_map=tuple(sorted(chord_symbols.items())),
         rotation_equation_count=2 * len(system.rotation_equations),
         translation_equation_count=2 * len(system.translation_equations),
+        contact_point_equation_count=2 * contact_point_equation_count,
+        distinguished_point_inequality_count=distinguished_point_inequality_count,
+        global_isometry_enforced=placed_geometry_analysis is not None,
         require_all_chords_nonzero=require_all_chords_nonzero,
         relaxation_notes=(
             "Angles are represented only by unit phasors; winding numbers are forgotten.",
-            "Principal point-angle bounds and pole inequalities are enforced by the core filters, not repeated here.",
-            "The complete pointwise rigid-isometry realization problem is not yet encoded.",
+            "Principal point-angle bounds and pole inequalities are enforced by the exact joint linear filter, not repeated here.",
+            (
+                "A single global direct/reflected isometry per copy is enforced at every distinguished contact point."
+                if placed_geometry_analysis is not None
+                else "Global copy isometries were not supplied to this standalone problem."
+            ),
+            "Generic intersections between interiors of curved arcs are not encoded.",
         ),
     )
 
@@ -519,7 +643,8 @@ def main() -> int:
         derivation = tuple(item for item in args.derivation.split(",") if item)
         case, state = find_case_and_state(args.case_id, derivation)
     system = external.build_joint_boundary_system(case, state)
-    problem = build_z3_problem(system)
+    placed = placed_geometry.analyze_placed_copy_geometry(case, state, system)
+    problem = build_z3_problem(system, placed_geometry_analysis=placed)
     args.output.write_text(problem.script_smt2, encoding="utf-8")
     payload: Dict[str, object] = {
         "case_id": case.case_id,

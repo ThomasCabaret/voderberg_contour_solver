@@ -66,6 +66,64 @@ class DecoratedSolution:
 
 
 @dataclass(frozen=True)
+class NormalizedLiteral:
+    variable: str
+    inverse: bool
+
+    @property
+    def text(self) -> str:
+        return self.variable + ("^-1" if self.inverse else "")
+
+    def flipped(self) -> "NormalizedLiteral":
+        return NormalizedLiteral(self.variable, not self.inverse)
+
+
+@dataclass(frozen=True)
+class NormalizedPoint:
+    class_id: str
+    sign: int
+    fixed_zero: bool
+    pole: Optional[str]
+
+    @property
+    def angle_text(self) -> str:
+        if self.fixed_zero:
+            return f"{self.class_id}=0"
+        return self.class_id if self.sign >= 0 else f"-{self.class_id}"
+
+
+@dataclass(frozen=True)
+class NormalizedDecoratedSolution:
+    segments: Tuple[NormalizedLiteral, ...]
+    points: Tuple[NormalizedPoint, ...]
+    mappings: Tuple[ContactMapping, ...]
+    transform_label: str
+    serialized: str
+
+    @property
+    def segment_count(self) -> int:
+        return len(self.segments)
+
+    @property
+    def variable_count(self) -> int:
+        return len({literal.variable for literal in self.segments})
+
+    @property
+    def free_angle_count(self) -> int:
+        return len({point.class_id for point in self.points if not point.fixed_zero})
+
+    @property
+    def fixed_zero_count(self) -> int:
+        return len({point.class_id for point in self.points if point.fixed_zero})
+
+    def cycle_record(self) -> List[Tuple[str, str, str]]:
+        return [
+            (point.pole or "", point.angle_text, literal.text)
+            for literal, point in zip(self.segments, self.points)
+        ]
+
+
+@dataclass(frozen=True)
 class CanonicalSolution:
     key: str
     canonical_json: str
@@ -358,13 +416,14 @@ def _transformed_cycle(
     return [item for item in segments if item is not None], [item for item in points if item is not None]
 
 
-def _normalize_cycle_tokens(
+def _normalize_cycle(
     segments: Sequence[base.Literal],
     points: Sequence[PointDecoration],
-) -> List[Tuple[str, str, str]]:
+) -> Tuple[Tuple[NormalizedLiteral, ...], Tuple[NormalizedPoint, ...]]:
     variable_names: Dict[str, Tuple[str, bool]] = {}
     angle_names: Dict[str, Tuple[str, int]] = {}
-    tokens: List[Tuple[str, str, str]] = []
+    normalized_segments: List[NormalizedLiteral] = []
+    normalized_points: List[NormalizedPoint] = []
 
     for literal, point in zip(segments, points):
         if literal.variable not in variable_names:
@@ -373,20 +432,108 @@ def _normalize_cycle_tokens(
                 literal.inverse,
             )
         variable_name, first_inverse = variable_names[literal.variable]
-        normalized_inverse = literal.inverse ^ first_inverse
-        segment_token = variable_name + ("^-1" if normalized_inverse else "")
+        normalized_segments.append(
+            NormalizedLiteral(variable_name, literal.inverse ^ first_inverse)
+        )
 
         if point.class_id not in angle_names:
             orientation = 0 if point.fixed_zero else (point.sign or 1)
             angle_names[point.class_id] = (f"a{len(angle_names)}", orientation)
         angle_name, class_orientation = angle_names[point.class_id]
         if point.fixed_zero:
-            angle_token = f"{angle_name}=0"
+            normalized_sign = 0
         else:
             normalized_sign = point.sign * class_orientation
-            angle_token = angle_name if normalized_sign >= 0 else f"-{angle_name}"
-        tokens.append((point.pole or "", angle_token, segment_token))
-    return tokens
+        normalized_points.append(
+            NormalizedPoint(
+                class_id=angle_name,
+                sign=normalized_sign,
+                fixed_zero=point.fixed_zero,
+                pole=point.pole,
+            )
+        )
+    return tuple(normalized_segments), tuple(normalized_points)
+
+
+def _normalize_cycle_tokens(
+    segments: Sequence[base.Literal],
+    points: Sequence[PointDecoration],
+) -> List[Tuple[str, str, str]]:
+    normalized_segments, normalized_points = _normalize_cycle(segments, points)
+    return [
+        (point.pole or "", point.angle_text, literal.text)
+        for literal, point in zip(normalized_segments, normalized_points)
+    ]
+
+
+def normalized_variants(solution: DecoratedSolution) -> Tuple[NormalizedDecoratedSolution, ...]:
+    if not solution.segments:
+        raise ValueError("Cannot normalize an empty contour")
+    if len(solution.segments) != len(solution.points):
+        raise ValueError("Every contour segment must have one preceding point")
+    pole_positions = [
+        index for index, point in enumerate(solution.points) if point.pole is not None
+    ]
+    if len(pole_positions) != 2:
+        raise ValueError("Decorated contour must contain exactly two poles")
+
+    output: List[NormalizedDecoratedSolution] = []
+    seen: set[str] = set()
+    size = len(solution.segments)
+    for reversed_cycle in (False, True):
+        for pole_choice, origin in enumerate(pole_positions):
+            transformed_segments, transformed_points = _transformed_cycle(
+                solution, origin, reversed_cycle
+            )
+            normalized_segments, normalized_points = _normalize_cycle(
+                transformed_segments, transformed_points
+            )
+            mappings = tuple(
+                sorted(
+                    (
+                        _transform_mapping(mapping, origin, reversed_cycle, size)
+                        for mapping in solution.mappings
+                    ),
+                    key=_mapping_tuple,
+                )
+            )
+            payload = {
+                "schema": SCHEMA_VERSION,
+                "cycle": [
+                    (point.pole or "", point.angle_text, literal.text)
+                    for literal, point in zip(normalized_segments, normalized_points)
+                ],
+                "mappings": [_mapping_tuple(mapping) for mapping in mappings],
+            }
+            serialized = json.dumps(
+                payload,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+            )
+            if serialized in seen:
+                continue
+            seen.add(serialized)
+            label = (
+                ("mirror" if reversed_cycle else "direct")
+                + f"_pole_choice_{pole_choice}"
+            )
+            output.append(
+                NormalizedDecoratedSolution(
+                    segments=normalized_segments,
+                    points=normalized_points,
+                    mappings=mappings,
+                    transform_label=label,
+                    serialized=serialized,
+                )
+            )
+    return tuple(output)
+
+
+def canonical_normalized_solution(
+    solution: DecoratedSolution,
+) -> NormalizedDecoratedSolution:
+    return min(normalized_variants(solution), key=lambda item: item.serialized)
 
 
 def _mapping_tuple(mapping: ContactMapping) -> Tuple[object, ...]:
@@ -438,55 +585,29 @@ def _terminal_mapping_record(solution: DecoratedSolution) -> Dict[str, object]:
     }
 
 
+def terminal_mapping_record(
+    case: base.PlacementCase,
+    state: base.SolverState,
+    formal_profile: profile_formatter.FormalContourProfile,
+) -> Dict[str, object]:
+    """Export the terminal contact mapping independently of canonicalization.
+
+    The geometric solver needs this mapping even when decorated-solution
+    canonicalization is disabled, because it determines how every formal curve
+    occurrence must transform under the two copy isometries.
+    """
+    return _terminal_mapping_record(
+        build_decorated_solution(case, state, formal_profile)
+    )
+
+
 def canonicalize_decorated_data(solution: DecoratedSolution) -> CanonicalSolution:
-    if not solution.segments:
-        raise ValueError("Cannot canonicalize an empty contour")
-    if len(solution.segments) != len(solution.points):
-        raise ValueError("Every contour segment must have one preceding point")
-    pole_positions = [
-        index for index, point in enumerate(solution.points) if point.pole is not None
-    ]
-    if len(pole_positions) != 2:
-        raise ValueError("Decorated contour must contain exactly two poles")
-
-    candidates: List[Tuple[str, str]] = []
-    size = len(solution.segments)
-    for reversed_cycle in (False, True):
-        for pole_choice, origin in enumerate(pole_positions):
-            transformed_segments, transformed_points = _transformed_cycle(
-                solution, origin, reversed_cycle
-            )
-            cycle_tokens = _normalize_cycle_tokens(
-                transformed_segments, transformed_points
-            )
-            mappings = [
-                _transform_mapping(mapping, origin, reversed_cycle, size)
-                for mapping in solution.mappings
-            ]
-            mapping_tokens = sorted(_mapping_tuple(mapping) for mapping in mappings)
-            payload = {
-                "schema": SCHEMA_VERSION,
-                "cycle": cycle_tokens,
-                "mappings": mapping_tokens,
-            }
-            serialized = json.dumps(
-                payload,
-                sort_keys=True,
-                separators=(",", ":"),
-                ensure_ascii=True,
-            )
-            label = (
-                ("mirror" if reversed_cycle else "direct")
-                + f"_pole_choice_{pole_choice}"
-            )
-            candidates.append((serialized, label))
-
-    canonical_json, label = min(candidates, key=lambda item: item[0])
-    key = hashlib.sha256(canonical_json.encode("ascii")).hexdigest()
+    canonical = canonical_normalized_solution(solution)
+    key = hashlib.sha256(canonical.serialized.encode("ascii")).hexdigest()
     return CanonicalSolution(
         key=key,
-        canonical_json=canonical_json,
-        transform_label=label,
+        canonical_json=canonical.serialized,
+        transform_label=canonical.transform_label,
         terminal_mapping=_terminal_mapping_record(solution),
     )
 

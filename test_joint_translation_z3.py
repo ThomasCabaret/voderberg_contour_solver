@@ -2,13 +2,17 @@ import unittest
 
 import external_boundary_constraints as external
 import joint_translation_z3 as joint
+import placed_copy_geometry as placed
 
 
 class JointTranslationZ3Tests(unittest.TestCase):
     def _problem(self):
         case, state = joint.find_voderberg_case_and_state()
         system = external.build_joint_boundary_system(case, state)
-        return joint.build_z3_problem(system)
+        placed_analysis = placed.analyze_placed_copy_geometry(case, state, system)
+        return joint.build_z3_problem(
+            system, placed_geometry_analysis=placed_analysis
+        )
 
     def test_voderberg_problem_is_polynomial_qfnra(self):
         problem = self._problem()
@@ -29,6 +33,13 @@ class JointTranslationZ3Tests(unittest.TestCase):
         problem = self._problem()
         self.assertTrue(problem.relaxation_notes)
         self.assertTrue(any("winding" in note for note in problem.relaxation_notes))
+
+    def test_global_copy_isometries_are_enforced_pointwise(self):
+        problem = self._problem()
+        self.assertTrue(problem.global_isometry_enforced)
+        self.assertGreater(problem.contact_point_equation_count, 0)
+        self.assertGreater(problem.distinguished_point_inequality_count, 0)
+        self.assertIn("One shared direct/reflected isometry per copy", problem.script_smt2)
 
     def test_missing_z3_is_reported_without_crashing(self):
         problem = self._problem()

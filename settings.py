@@ -24,7 +24,33 @@ DEFAULT_AUDIT_MAX_DEPTH = 5
 DEFAULT_AUDIT_MAX_STATES = 100
 DEFAULT_FORMAL_MAX_CYCLE_UNROLLS = 3
 FORMAL_CYCLE_CAP_DISABLED_VALUE = 0
+DEFAULT_ENABLE_POSITIVE_LENGTH_FILTER = True
 DEFAULT_ENABLE_SOLUTION_CANONICALIZATION = True
+DEFAULT_ENABLE_CANONICAL_PROFILE_REDUCTION = True
+DEFAULT_ENABLE_PROFILE_SUBSUMPTION_REDUCTION = True
+
+# Exact partial formal solver.  The residual graph must be complete before any
+# result is labelled exact.  Only finite and fixed-context power cycles are
+# compiled for downstream use; more general morphic SCCs remain explicit.
+DEFAULT_FORMAL_SOLVER_MODE = "exact-partial"
+FORMAL_SOLVER_MODE_CHOICES = ("exact-partial", "legacy-bounded")
+DEFAULT_EXACT_GRAPH_MAX_NODES = 500
+DEFAULT_EXACT_GRAPH_MAX_EDGES = 3000
+DEFAULT_EXACT_MAX_FAMILIES_PER_CASE = 10000
+# Parametric families remain symbolic by default.  The legacy geometric
+# pipeline receives only genuinely finite formal families unless an explicit
+# expansion policy is selected on the audit command line.
+DEFAULT_FAMILY_EXPANSION_POLICY = "none"
+FAMILY_EXPANSION_POLICY_CHOICES = ("none", "minimum", "fixed", "range")
+DEFAULT_FAMILY_REPRESENTATIVE_EXPONENT = 1
+DEFAULT_FAMILY_EXPANSION_MAX_EXPONENT = 3
+DEFAULT_FAMILY_EXPANSION_MAX_SPECIALIZATIONS = 10000
+# Backward-compatible alias.  New code should use DEFAULT_FAMILY_EXPANSION_POLICY.
+DEFAULT_EXPAND_PARAMETRIC_REPRESENTATIVES = False
+DEFAULT_ENABLE_CURVE_TERM_SPECIALIZATION = True
+
+DEFAULT_VODERBERG_TYPE_SELECTION = "all"
+VODERBERG_TYPE_SELECTION_CHOICES = ("all", "type1", "type2", "type1+type2")
 DEEP_AUDIT_MAX_DEPTH = 10
 DEEP_AUDIT_MAX_STATES = 1000
 AGGRESSIVE_AUDIT_MAX_DEPTH = 20
@@ -81,6 +107,8 @@ GEOMETRY_DEFAULT_MAX_ITERATIONS = 180
 GEOMETRY_DEFAULT_POPULATION_SIZE = 8
 GEOMETRY_DEFAULT_SEED = 1729
 GEOMETRY_DEFAULT_RESUME = True
+GEOMETRY_ENFORCE_CONTACT_TEMPLATE_CONSTRAINTS = True
+GEOMETRY_TEMPLATE_CONSTRAINT_TOLERANCE = 1.0e-10
 GEOMETRY_LENGTH_MIN = 0.25
 GEOMETRY_LENGTH_MAX = 2.0
 GEOMETRY_ANGLE_MARGIN = 0.03
@@ -99,3 +127,4 @@ STATUS_EXACT = "exact_within_model"
 STATUS_SOUND_INCOMPLETE = "sound_rejection_incomplete_coverage"
 STATUS_BOUNDED = "bounded_incomplete_enumeration"
 STATUS_EXPERIMENTAL = "experimental_not_in_core_rejection_pipeline"
+STATUS_HEURISTIC = "heuristic_candidate_search"

@@ -34,6 +34,7 @@ class ResultsWebTests(unittest.TestCase):
         self.assertIn("Profil formel complet", html)
         self.assertIn("sortKey", html)
         self.assertIn("flipFilter", html)
+        self.assertIn("voderbergTypeFilter", html)
         self.assertIn("Couche experimentale", html)
         self.assertIn("solution.profile", html)
         self.assertIn("Classes d angles", html)

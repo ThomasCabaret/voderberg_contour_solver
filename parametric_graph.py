@@ -90,6 +90,7 @@ class DerivationGraph:
     case_id: Optional[int]
     initial_a: Word
     initial_b: Word
+    initial_environment: Tuple[Tuple[str, Word], ...]
     nodes: Tuple[GraphNode, ...]
     edges: Tuple[GraphEdge, ...]
     root: int
@@ -105,6 +106,10 @@ class DerivationGraph:
             "truncation_reason": self.truncation_reason,
             "initial_A": base.word_to_text(self.initial_a),
             "initial_B": base.word_to_text(self.initial_b),
+            "initial_environment": {
+                variable: base.word_to_text(word)
+                for variable, word in self.initial_environment
+            },
             "nodes": [node.to_dict() for node in self.nodes],
             "edges": [
                 {
@@ -360,6 +365,7 @@ def build_graph(
             case_id=case_id,
             initial_a=initial_a,
             initial_b=initial_b,
+            initial_environment=(),
             nodes=(),
             edges=(),
             root=-1,
@@ -387,6 +393,13 @@ def build_graph(
 
     canonical_a = rewrite_initial(initial_a)
     canonical_b = rewrite_initial(initial_b)
+    initial_variables = sorted(
+        {literal.variable for literal in tuple(initial_a) + tuple(initial_b)}
+    )
+    canonical_environment = tuple(
+        (variable, rewrite_initial((Literal(variable),)))
+        for variable in initial_variables
+    )
 
     node_ids: Dict[Tuple[Equation, ...], int] = {root_equations: 0}
     node_equations: List[Tuple[Equation, ...]] = [root_equations]
@@ -444,6 +457,7 @@ def build_graph(
         case_id=case_id,
         initial_a=canonical_a,
         initial_b=canonical_b,
+        initial_environment=canonical_environment,
         nodes=nodes,
         edges=tuple(edges),
         root=0,

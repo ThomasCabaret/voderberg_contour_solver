@@ -6,6 +6,9 @@ from typing import Dict, Optional
 
 import external_boundary_constraints as external
 import forced_point_coincidence as point_filter
+import joint_angle_feasibility as joint_angles
+import placed_copy_geometry as placed_geometry
+import pole_angle_filter
 import joint_translation_z3 as z3_backend
 import settings
 import symbolic_enumerator as base
@@ -18,6 +21,8 @@ class ExperimentalProfileAnalysis:
     external_system: Optional[external.JointBoundarySystem]
     inner_point_coincidence: Optional[point_filter.ForcedPointCoincidenceAnalysis]
     outer_point_coincidence: Optional[point_filter.ForcedPointCoincidenceAnalysis]
+    joint_angle_analysis: Optional[joint_angles.JointAngleFeasibility]
+    placed_copy_analysis: Optional[placed_geometry.PlacedCopyGeometryAnalysis]
     z3_problem: Optional[z3_backend.Z3Problem]
     z3_result: Optional[z3_backend.Z3Result]
 
@@ -38,7 +43,11 @@ class ExperimentalProfileAnalysis:
                 return True
             if self.external_system.translation_analysis.exact_obstruction:
                 return True
+        if self.joint_angle_analysis is not None and not self.joint_angle_analysis.feasible:
+            return True
         if self.forced_point_rejection:
+            return True
+        if self.placed_copy_analysis is not None and not self.placed_copy_analysis.passes_filter:
             return True
         return bool(self.z3_result and self.z3_result.exact_unsat)
 
@@ -51,10 +60,10 @@ class ExperimentalProfileAnalysis:
             "affects_core_status": False,
             "exact_encoded_model_rejection": self.exact_encoded_model_rejection,
             "model_scope": (
-                "Shared inner/outer closure model with exact symbolic forced-point "
-                "coincidence checks and an optional polynomial Z3/NLSAT relaxation. "
-                "Complete pointwise rigid-isometry realization constraints are not "
-                "yet encoded."
+                "Shared inner/outer closure model, one exact rational joint angle "
+                "system, a shared-frame placement of all three copies, exact symbolic "
+                "coincidence/overlap checks, and an optional polynomial Z3/NLSAT "
+                "model enforcing every distinguished contact point."
             ),
             "external_boundary": None if system is None else {
                 "outer_boundary": system.outer_boundary.to_dict(),
@@ -66,7 +75,15 @@ class ExperimentalProfileAnalysis:
                     equation.to_dict() for equation in system.translation_equations
                 ],
                 "joint_rotation_analysis": system.rotation_analysis.to_dict(),
+                "joint_angle_analysis": (
+                    None if self.joint_angle_analysis is None
+                    else self.joint_angle_analysis.to_dict()
+                ),
                 "joint_translation_analysis": system.translation_analysis.to_dict(),
+                "placed_copy_geometry": (
+                    None if self.placed_copy_analysis is None
+                    else self.placed_copy_analysis.to_dict()
+                ),
                 "forced_point_coincidence": {
                     "inner_boundary": (
                         None
@@ -125,6 +142,8 @@ def execute_prepared_z3(
         external_system=analysis.external_system,
         inner_point_coincidence=analysis.inner_point_coincidence,
         outer_point_coincidence=analysis.outer_point_coincidence,
+        joint_angle_analysis=analysis.joint_angle_analysis,
+        placed_copy_analysis=analysis.placed_copy_analysis,
         z3_problem=analysis.z3_problem,
         z3_result=result,
     )
@@ -141,106 +160,86 @@ def analyze_experimental_profile(
         system = external.build_joint_boundary_system(case, state)
     except Exception as exc:
         return ExperimentalProfileAnalysis(
-            "external_boundary_error",
-            f"{type(exc).__name__}: {exc}",
-            None,
-            None,
-            None,
-            None,
-            None,
+            "external_boundary_error", f"{type(exc).__name__}: {exc}",
+            None, None, None, None, None, None, None,
         )
 
     try:
+        pole_analysis = pole_angle_filter.analyze_pole_angles(case, state)
+        joint_angle_analysis = joint_angles.analyze_joint_angle_feasibility(
+            system.rotation_equations, pole_analysis
+        )
         inner_points = point_filter.analyze_boundary_path_forced_coincidences(
-            system.inner_boundary,
-            system.curve_turn_solution,
+            system.inner_boundary, system.curve_turn_solution
         )
         outer_points = point_filter.analyze_boundary_path_forced_coincidences(
-            system.outer_boundary,
-            system.curve_turn_solution,
+            system.outer_boundary, system.curve_turn_solution
+        )
+        placed_analysis = placed_geometry.analyze_placed_copy_geometry(
+            case, state, system
         )
     except Exception as exc:
         return ExperimentalProfileAnalysis(
-            "forced_point_filter_error",
-            f"{type(exc).__name__}: {exc}",
-            system,
-            None,
-            None,
-            None,
-            None,
+            "exact_filter_error", f"{type(exc).__name__}: {exc}",
+            system, None, None, None, None, None, None,
         )
 
-    rejection_reason = _first_exact_rejection_reason(
-        system,
-        inner_points,
-        outer_points,
-    )
-    if rejection_reason is not None:
+    reason = None
+    status = "external_system_built"
+    if not joint_angle_analysis.feasible:
+        status = "exact_joint_angle_reject"
+        reason = joint_angle_analysis.discard_reason
+    elif system.translation_analysis.exact_obstruction:
+        status = "exact_joint_translation_reject"
+        reason = system.translation_analysis.reason
+    elif not inner_points.passes_filter:
+        status = "exact_forced_point_reject"
+        reason = "Inner boundary: " + (inner_points.discard_reason or "forced coincidence")
+    elif not outer_points.passes_filter:
+        status = "exact_forced_point_reject"
+        reason = "Outer boundary: " + (outer_points.discard_reason or "forced coincidence")
+    elif not placed_analysis.passes_filter:
+        status = "exact_placed_copy_reject"
+        reason = placed_analysis.discard_reason
+
+    if reason is not None:
         return ExperimentalProfileAnalysis(
-            "exact_encoded_model_reject",
-            rejection_reason,
-            system,
-            inner_points,
-            outer_points,
-            None,
-            None,
+            status, reason, system, inner_points, outer_points,
+            joint_angle_analysis, placed_analysis, None, None,
         )
 
     if not prepare_z3 and not run_z3:
         return ExperimentalProfileAnalysis(
-            "external_system_built",
-            None,
-            system,
-            inner_points,
-            outer_points,
-            None,
-            None,
+            status, None, system, inner_points, outer_points,
+            joint_angle_analysis, placed_analysis, None, None,
         )
 
     try:
         problem = z3_backend.build_z3_problem(
             system,
+            placed_geometry_analysis=placed_analysis,
             require_all_chords_nonzero=settings.Z3_REQUIRE_ALL_CHORDS_NONZERO,
         )
     except NotImplementedError as exc:
         return ExperimentalProfileAnalysis(
-            "z3_encoding_unsupported",
-            str(exc),
-            system,
-            inner_points,
-            outer_points,
-            None,
-            None,
+            "z3_encoding_unsupported", str(exc), system, inner_points, outer_points,
+            joint_angle_analysis, placed_analysis, None, None,
         )
     except Exception as exc:
         return ExperimentalProfileAnalysis(
-            "z3_encoding_error",
-            f"{type(exc).__name__}: {exc}",
-            system,
-            inner_points,
-            outer_points,
-            None,
-            None,
+            "z3_encoding_error", f"{type(exc).__name__}: {exc}",
+            system, inner_points, outer_points, joint_angle_analysis,
+            placed_analysis, None, None,
         )
 
     if not run_z3:
         return ExperimentalProfileAnalysis(
-            "z3_problem_ready",
-            None,
-            system,
-            inner_points,
-            outer_points,
-            problem,
-            None,
+            "z3_problem_ready", None, system, inner_points, outer_points,
+            joint_angle_analysis, placed_analysis, problem, None,
         )
 
     result = z3_backend.run_z3_problem(problem, timeout_ms=timeout_ms)
     return ExperimentalProfileAnalysis(
-        result.status,
-        result.reason,
-        system,
-        inner_points,
-        outer_points,
-        problem,
-        result,
+        result.status, result.reason, system, inner_points, outer_points,
+        joint_angle_analysis, placed_analysis, problem, result,
     )

@@ -74,6 +74,42 @@ class GeometrySearchViewerTests(unittest.TestCase):
         self.assertEqual(len(vertices), 4)
         self.assertEqual(len(metadata), 3)
 
+    def test_reflected_self_contact_removes_artificial_intermediate_points(self):
+        profile = geometry.SearchProfile(
+            profile_id=0,
+            case_id=0,
+            formal_text="test",
+            occurrences=(geometry.SegmentOccurrence("V0", False),),
+            point_expressions=("0",),
+            free_angles=(),
+            curve_variables=("V0",),
+            kappa_assignments={"V0": "K0"},
+            terminal_mapping={
+                "schema_version": "terminal-contact-mapping-v1",
+                "segment_count": 1,
+                "mappings": [{
+                    "copy_index": 0,
+                    "mirror_sign": -1,
+                    "segment_pairs": [{
+                        "source_position": 0,
+                        "source_orientation": 1,
+                        "target_position": 0,
+                        "target_orientation": 1,
+                    }],
+                }],
+            },
+        )
+        plan = geometry._template_plan(
+            profile,
+            3,
+            enforce_contact_template_constraints=True,
+        )
+        self.assertEqual(plan.component_for("V0").effective_edge_count, 1)
+        self.assertEqual(len(geometry._bounds(profile, 3, plan)), 1)
+        vertices, metadata, *_ = geometry._simulate(profile, [1.25], 3, plan)
+        self.assertEqual(len(vertices), 2)
+        self.assertEqual(len(metadata), 1)
+
     def test_streaming_top_level_array_reader_handles_small_chunks(self):
         payload = {
             "metadata": {"profile_count": 3},
@@ -90,6 +126,82 @@ class GeometrySearchViewerTests(unittest.TestCase):
                 geometry._iter_top_level_array(path, "profiles", chunk_size=7)
             )
         self.assertEqual([record["profile_id"] for record in records], [1, 2, 3])
+
+
+class FormalCurveTermGeometryIntegrationTests(unittest.TestCase):
+    def _profile(self, *, target_orientation, mirror_sign, exported=True):
+        occurrence = geometry.SegmentOccurrence("V0", False)
+        mapping = {
+            "schema_version": "terminal-contact-mapping-v1",
+            "segment_count": 1,
+            "mappings": [{
+                "copy_index": 0,
+                "mirror_sign": mirror_sign,
+                "segment_pairs": [{
+                    "source_position": 0,
+                    "source_orientation": 1,
+                    "target_position": 0,
+                    "target_orientation": target_orientation,
+                }],
+            }],
+        }
+        formal = geometry.curve_term_solver.solve_curve_terms(
+            curve_variables=("V0",),
+            occurrences=(occurrence,),
+            terminal_mapping=mapping,
+        )
+        return geometry.SearchProfile(
+            profile_id=999,
+            case_id=999,
+            formal_text="(P0) V0",
+            occurrences=(occurrence,),
+            point_expressions=("0",),
+            free_angles=(),
+            curve_variables=("V0",),
+            kappa_assignments={"V0": "K0"},
+            terminal_mapping=mapping,
+            curve_term_solution=(formal.to_dict() if exported else None),
+        )
+
+    def test_straight_formal_value_removes_requested_intermediate_points(self):
+        profile = self._profile(target_orientation=1, mirror_sign=-1)
+        plan = geometry._template_plan(
+            profile,
+            intermediate_points=5,
+            enforce_contact_template_constraints=True,
+        )
+        component = plan.component_for("V0")
+        self.assertEqual(component.mode, "straight")
+        self.assertEqual(component.requested_edge_count, 6)
+        self.assertEqual(component.effective_edge_count, 1)
+        self.assertEqual(component.free_turn_count, 0)
+
+    def test_mirror_symmetric_term_uses_one_shared_half_template(self):
+        profile = self._profile(target_orientation=-1, mirror_sign=-1)
+        plan = geometry._template_plan(
+            profile,
+            intermediate_points=3,
+            enforce_contact_template_constraints=True,
+        )
+        component = plan.component_for("V0")
+        self.assertEqual(component.mode, "endpoint_swapping_reflection")
+        self.assertEqual(component.effective_edge_count, 4)
+        self.assertLess(component.free_length_count, component.effective_edge_count)
+
+    def test_stale_exported_curve_terms_are_rejected(self):
+        profile = self._profile(target_orientation=1, mirror_sign=-1)
+        stale = dict(profile.curve_term_solution)
+        stale["terms"] = {"V0": {"kind": "curve_parameter", "text": "C0"}}
+        profile = geometry.SearchProfile(**{
+            **profile.__dict__,
+            "curve_term_solution": stale,
+        })
+        with self.assertRaisesRegex(ValueError, "stale curve terms"):
+            geometry._template_plan(
+                profile,
+                intermediate_points=3,
+                enforce_contact_template_constraints=True,
+            )
 
 
 if __name__ == "__main__":

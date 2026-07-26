@@ -2,12 +2,27 @@
   "scope": {
     "placement_cases_with_reflections_allowed": 2816,
     "placement_cases_direct_copies_only": 704,
-    "cases_with_at_least_one_terminal_profile_in_bound": 632,
-    "max_solver_depth_per_case": 20,
-    "max_solver_states_per_case": 10000,
+    "cases_with_at_least_one_downstream_expansion": 222,
+    "formal_solver_mode": "exact-partial",
+    "max_solver_depth_per_case": 5,
+    "max_solver_states_per_case": 100,
     "max_cycle_unrolls_per_residual_state": 3,
+    "exact_graph_max_nodes_per_case": 500,
+    "exact_graph_max_edges_per_case": 3000,
+    "exact_max_families_per_case": 10000,
+    "family_expansion_policy": {
+      "schema_version": "family-expansion-policy-v2",
+      "kind": "none",
+      "fixed_exponent": 1,
+      "maximum_exponent": 3,
+      "max_specializations": 10000,
+      "parametric_expansion_is_opt_in": true
+    },
+    "curve_term_specialization_enabled": true,
+    "positive_length_filter_enabled": true,
     "solution_canonicalization_enabled": true,
-    "exhaustiveness": "bounded formal-word enumeration; geometric filters are necessary-condition filters"
+    "voderberg_type_selection": "all",
+    "exhaustiveness": "exact partial formal solving on completely constructed supported residual graphs; unsupported/truncated systems are retained without downstream profiles; geometric filters remain necessary-condition filters"
   },
   "method_status": {
     "placement_enumerator": {
@@ -15,10 +30,25 @@
       "automatic_rejection_allowed": true,
       "description": "Finite exhaustive enumeration of pole-image placements and contact-imposed parities."
     },
+    "positive_word_length_filter": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "Rejects a generated two-equation system when equality of word lengths has no solution with every formal variable assigned a strictly positive integer length."
+    },
     "formal_word_solver": {
-      "status": "bounded_incomplete_enumeration",
+      "status": "sound_rejection_incomplete_coverage",
+      "automatic_rejection_allowed": true,
+      "description": "Default exact-partial mode labels a case exact only after its complete residual graph is built. Finite and fixed-context power SCCs are compiled into complete finite/nested-power families; complete but morphic graphs and graph-budget truncations are retained without downstream profiles. Legacy bounded mode remains optional."
+    },
+    "family_representative_expansion": {
+      "status": "exact_within_model",
       "automatic_rejection_allowed": false,
-      "description": "Every emitted terminal profile is checked, but the audit explores only configured depth/state bounds and may also apply an explicitly reported temporary cycle-unroll cap."
+      "description": "Independent optional adapter for explicit minimum, fixed, or bounded-range exponent specialization. It is disabled by default; exact parametric families remain separate from primitive finite solutions."
+    },
+    "curve_term_solver": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": false,
+      "description": "Post-word-solver formal interpretation of terminal mappings. It emits explicit Straight(lambda), Mirror and Inverse curve terms and positive straight-length classes without modifying the generic word-equation solver."
     },
     "formal_cycle_unroll_cap": {
       "status": "bounded_incomplete_enumeration",
@@ -43,7 +73,12 @@
     "pole_angle_filter": {
       "status": "exact_within_model",
       "automatic_rejection_allowed": true,
-      "description": "Exact necessary simultaneous inequalities at P0 and P1."
+      "description": "Exact necessary simultaneous inequalities at P0 and P1. Retained as a cheap early filter; the authoritative downstream check combines both poles with inner and outer rotation equations."
+    },
+    "joint_angle_feasibility": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": true,
+      "description": "One exact rational linear program jointly enforces the inner and outer total turns, every angle-class bound, and both strict pole margins. A profile survives only when a strictly positive rational margin exists."
     },
     "translation_holonomy_filter": {
       "status": "sound_rejection_incomplete_coverage",
@@ -52,148 +87,2731 @@
     },
     "forced_point_coincidence": {
       "status": "sound_rejection_incomplete_coverage",
-      "automatic_rejection_allowed": false,
-      "description": "Standalone prototype, not integrated into core status."
+      "automatic_rejection_allowed": true,
+      "description": "Integrated exact symbolic prefix-identity filter on the inner and outer boundaries. It rejects only forced unintended coincidences and remains incomplete for identities requiring nonlinear trigonometric consequences."
     },
     "external_boundary_builder": {
-      "status": "experimental_not_in_core_rejection_pipeline",
+      "status": "exact_within_model",
       "automatic_rejection_allowed": false,
-      "description": "Constructs the shared inner/outer boundary system and exact linear turn constraints as a separate report layer."
+      "description": "Constructs the shared inner/outer boundary system, exact linear turn equations, and chord expressions used by independent downstream filters."
+    },
+    "placed_copy_geometry": {
+      "status": "sound_rejection_incomplete_coverage",
+      "automatic_rejection_allowed": true,
+      "description": "Places the reference tile and both copies in one symbolic frame using one global direct or reflected isometry per copy. It rejects forced self-coincidences and exact same-side arc overlaps; isolated extra cross-copy point contacts and generic curved crossings are deliberately not rejected."
+    },
+    "curve_template_duality": {
+      "status": "exact_within_model",
+      "automatic_rejection_allowed": false,
+      "description": "Numeric compiler and validator for the formal curve-term solution. It propagates full edge-length and internal-turn templates under reversal/reflection and removes artificial vertices from Straight(lambda) values."
+    },
+    "geometric_candidate_search": {
+      "status": "heuristic_candidate_search",
+      "automatic_rejection_allowed": false,
+      "description": "Differential evolution searches the reduced polygonal template model. Found contours satisfy local terminal curve-template duality and prototype simplicity, but full three-copy non-overlap is still not certified; failures remain inconclusive."
     },
     "joint_translation_z3": {
       "status": "sound_rejection_incomplete_coverage",
       "automatic_rejection_allowed": true,
-      "description": "Z3/NLSAT solves a polynomial relaxation. UNSAT is an exact discard for the encoded necessary conditions; SAT is only a candidate and the complete rigid-tile realization problem is not yet encoded."
+      "description": "Z3/NLSAT solves a polynomial relaxation augmented with pointwise equations from one global direct or reflected isometry for each copy. UNSAT is a safe rejection for the encoded model; SAT is only a candidate because generic curved-arc intersections, winding intervals, and complete three-interior disjointness are not encoded."
     }
   },
   "formal_equation_audit_summary": {
+    "formal_solver_mode": "exact-partial",
     "placement_system_count": 2816,
     "quadratic_system_count": 608,
     "nonquadratic_system_count": 2208,
-    "contains_involution_case_count": 2112,
-    "at_most_once_per_equation_side_case_count": 2816,
-    "initially_inconsistent_case_count": 544,
-    "submitted_to_branching_solver_case_count": 2272,
-    "cases_with_terminal_profiles_within_bounds": 632,
-    "cases_without_terminal_profiles_within_bounds": 2184,
-    "search_outcome_counts": {
-      "exhausted_with_terminal_profiles": 214,
-      "exhausted_without_terminal_profiles": 817,
-      "initially_inconsistent": 544,
-      "truncated_with_terminal_profiles": 418,
-      "truncated_without_terminal_profiles": 823
-    },
-    "search_outcome_counts_by_occurrence_class": {
-      "cubic": {
-        "exhausted_with_terminal_profiles": 192,
-        "exhausted_without_terminal_profiles": 594,
-        "initially_inconsistent": 428,
-        "truncated_with_terminal_profiles": 400,
-        "truncated_without_terminal_profiles": 594
+    "positive_length_filter_enabled": true,
+    "positive_length_filter_rejected_case_count": 2184,
+    "exact_partial_solver": {
+      "schema_version": "exact-partial-word-solver-v2",
+      "case_count": 2816,
+      "status_counts": {
+        "EXACT_FINITE": 214,
+        "EXACT_GRAPH_UNSUPPORTED_FAMILY_LANGUAGE": 20,
+        "EXACT_NESTED_POWER": 10,
+        "EXACT_POWER": 72,
+        "EXACT_SUPPORTED_FAMILIES_WITH_UNSUPPORTED_FRONTIER": 22,
+        "EXACT_UNSAT": 2184,
+        "UNRESOLVED_GRAPH_LIMIT": 294
       },
-      "quadratic": {
-        "exhausted_with_terminal_profiles": 22,
-        "exhausted_without_terminal_profiles": 223,
-        "initially_inconsistent": 116,
-        "truncated_with_terminal_profiles": 18,
-        "truncated_without_terminal_profiles": 229
-      }
+      "exact_case_count": 2522,
+      "downstream_supported_case_count": 318,
+      "family_count": 2692,
+      "finite_family_count": 874,
+      "parametric_family_count": 1818,
+      "unsupported_family_frontier_count": 48,
+      "suppressed_finite_specialization_count": 0,
+      "unresolved_or_unsupported_case_count": 336
     },
-    "truncated_with_terminal_profiles_case_count": 418,
-    "truncated_without_terminal_profiles_case_count": 823,
-    "exhausted_with_terminal_profiles_case_count": 214,
-    "exhausted_without_terminal_profiles_case_count": 817,
-    "terminal_profile_sets_complete_within_current_graph_case_count": 214,
-    "terminal_profile_sets_potentially_incomplete_due_to_bounds_case_count": 418,
-    "solution_existence_unresolved_due_to_bounds_case_count": 823,
-    "no_terminal_after_exhausting_current_graph_case_count": 817,
-    "occurrence_class_counts": {
-      "cubic": 2208,
-      "quadratic": 608
-    },
-    "variable_count_histogram": {
-      "2": 16,
-      "3": 256,
-      "4": 912,
-      "5": 1152,
-      "6": 480
-    },
-    "maximum_occurrence_histogram": {
-      "2": 608,
-      "3": 2208
-    },
-    "recommended_solver_family_counts": {
-      "general_recompression_or_specialized_cycle_compression": 2208,
-      "quadratic_nielsen_graph_candidate": 608
-    },
-    "cases_with_terminal_profiles_by_occurrence_class": {
-      "cubic": 592,
-      "quadratic": 40
-    },
-    "terminal_profile_instances_by_occurrence_class": {
-      "cubic": 66246,
-      "quadratic": 13000
-    },
-    "bounded_search_truncated_case_count": 1241,
-    "bounded_search_state_limited_case_count": 272,
-    "bounded_search_depth_limited_case_count": 536,
-    "bounded_search_cycle_capped_case_count": 887,
-    "bounded_search_cycle_capped_with_terminal_profiles_case_count": 318,
-    "bounded_search_cycle_capped_without_terminal_profiles_case_count": 569,
-    "bounded_search_cycle_pruned_state_count": 92194,
-    "bounded_search_exhausted_case_count": 1031,
-    "truncated_case_count_by_occurrence_class": {
-      "cubic": 994,
-      "quadratic": 247
+    "downstream_expansion_count": 874,
+    "family_expansion_policy": {
+      "schema_version": "family-expansion-policy-v2",
+      "kind": "none",
+      "fixed_exponent": 1,
+      "maximum_exponent": 3,
+      "max_specializations": 10000,
+      "parametric_expansion_is_opt_in": true
     },
     "interpretation": {
-      "quadratic": "Every initial variable occurs at most twice across all equation sides.",
-      "search_exhausted": "The current transition-system exploration emptied its queue without hitting either configured bound.",
-      "search_truncated_with_terminals": "At least one terminal profile was found, but more terminal profiles may exist beyond the configured bounds.",
-      "search_truncated_without_terminals": "No terminal profile was found, and existence remains unresolved because a configured depth/state bound or the temporary cycle-unroll cap was hit.",
-      "cycle_unroll_cap": "A temporary anti-echo policy prunes a branch after the configured number of returns to the same residual equation system. It is not parametric cycle recognition and every hit is reported as truncation.",
-      "exhausted_without_terminals": "No terminal profile is reachable in the explored transition graph. This is not a general completeness theorem for arbitrary word equations.",
-      "method_selection": "Try a complete quadratic Nielsen-graph solver for quadratic systems before implementing general recompression."
+      "exact_supported": "The residual graph was completely constructed and every useful cycle was compiled into the supported finite/nested-power language.",
+      "exact_unsupported_family_language": "The complete residual graph is known, but at least one useful SCC mixes or branches evolving variables beyond the supported nested-power compiler.",
+      "unresolved_graph_limit": "Graph construction reached its node/edge budget; no completeness claim is made.",
+      "expansion": "Finite formal families are always sent downstream. Parametric families remain symbolic unless the explicit family expansion policy selects one or more exponent assignments."
     }
+  },
+  "voderberg_type_classification_summary": {
+    "schema_version": "voderberg-formal-type-v1",
+    "classification_level": "formal_contact_topology",
+    "selection": "all",
+    "terminal_profile_count_before_type_selection": 874,
+    "terminal_profile_count_selected_for_downstream_pipeline": 874,
+    "terminal_profile_count_excluded_by_type_selection": 0,
+    "type1_compatible_profile_count": 26,
+    "type2_compatible_profile_count": 8,
+    "compatible_with_both_profile_count": 0,
+    "compatible_with_neither_profile_count": 840,
+    "type1_compatible_placement_case_count_with_terminal_profiles": 6,
+    "type2_compatible_placement_case_count_with_terminal_profiles": 4,
+    "filtering_occurs_after_formal_terminal_profiles": true,
+    "geometric_realizability_proved": false,
+    "type1_compatible_placement_case_count_generated": 6,
+    "type2_compatible_placement_case_count_generated": 100
   },
   "decorated_solution_canonicalization_summary": {
     "enabled": true,
     "schema_version": "decorated-solution-v1",
-    "profile_instances_with_key": 79246,
-    "unique_decorated_solution_class_count": 28657,
-    "additional_equivalent_profile_instance_count": 50589,
+    "profile_instances_with_key": 874,
+    "unique_decorated_solution_class_count": 322,
+    "additional_equivalent_profile_instance_count": 552,
     "largest_class_size": 4,
     "canonicalization_error_count": 0,
-    "deduplication_applied": false,
+    "deduplication_applied": true,
     "mapping_included": true,
     "global_mirror_identified": true,
     "parametric_cycle_families_identified": false
   },
+  "profile_subsumption_summary": {
+    "enabled": true,
+    "schema_version": "decorated-profile-subsumption-v1",
+    "absorbed_profile_count": 87,
+    "records": [
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 0,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1",
+            "V1": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            3,
+            4,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 4,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0^-1 (a2) V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 7,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 8,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0^-1 (a3) V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            4,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 10,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 12,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0 (a3) V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            4,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 17,
+        "representative_profile_id": 725,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 19,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0 (a2) V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 21,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 25,
+        "representative_profile_id": 35,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 26,
+        "representative_profile_id": 35,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1=0) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 64,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0 (a1=0) V0^-1",
+            "V2": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            4,
+            5,
+            6,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 67,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 68,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1 (a2=0) V1^-1 (a1) V0^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            8,
+            9,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 69,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2=0) V1^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            4,
+            5,
+            6,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 70,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0 (a1=0) V0^-1",
+            "V2": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            4,
+            5,
+            6,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 72,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 73,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0 (a1) V1 (a2=0) V1^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            8,
+            9,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 89,
+        "representative_profile_id": 71,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 90,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0 (-a1) V1 (a2=0) V1^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            8,
+            9,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 91,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 93,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1 (a2=0) V1^-1 (-a1) V0^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            8,
+            9,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 94,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 98,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1 (a2=0) V1^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            6,
+            7,
+            8,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 99,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 100,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V2 (a3=0) V2^-1 (a2) V1^-1",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            9,
+            10,
+            11,
+            14
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 101,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1^-1",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 102,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 103,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1 (-a2) V2 (a3=0) V2^-1",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            9,
+            10,
+            11,
+            14
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 104,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 105,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1 (a2=0) V1^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            6,
+            7,
+            8,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 106,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 107,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1 (a2) V2 (a3=0) V2^-1",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            9,
+            10,
+            11,
+            14
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 108,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 109,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 110,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V2 (a3=0) V2^-1 (-a2) V1^-1",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            9,
+            10,
+            11,
+            14
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 111,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1^-1",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 117,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2=0) V1^-1 (a0) V0 (a1=0) V0^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            6,
+            7,
+            8,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 119,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V2 (a3=0) V2^-1 (a0) V0",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            8,
+            9,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 120,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V2 (a3=0) V2^-1 (a0) V0 (a1) V1 (a2=0) V1^-1",
+            "V2": "V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            9,
+            10,
+            11,
+            16
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 121,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 122,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0 (a1=0) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            4,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 126,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1 (a2=0) V1^-1 (a1) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 127,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2=0) V1^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            4,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 128,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0 (a1=0) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            4,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 131,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0 (a1) V1 (a2=0) V1^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 133,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0 (-a1) V1 (a2=0) V1^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 139,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1 (a2=0) V1^-1 (-a1) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 141,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1 (a2=0) V1^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            6,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 143,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V2 (a3=0) V2^-1 (a2) V1^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            9,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 146,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1 (-a2) V2 (a3=0) V2^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            9,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 148,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1 (a2=0) V1^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            6,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 150,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1 (a2) V2 (a3=0) V2^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            9,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 153,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V2 (a3=0) V2^-1 (-a2) V1^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            9,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 156,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2=0) V1^-1 (a0) V0 (a1=0) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            2,
+            6,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 158,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V2 (a3=0) V2^-1 (a0) V0"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            7,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 159,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V2 (a3=0) V2^-1 (a0) V0 (a1) V1 (a2=0) V1^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            9,
+            14
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 163,
+        "representative_profile_id": 422,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0",
+            "V2": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "-a1",
+            "a4": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 181,
+        "representative_profile_id": 422,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V0",
+            "V2": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a1",
+            "a4": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 277,
+        "representative_profile_id": 422,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "-a2",
+            "a4": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 294,
+        "representative_profile_id": 422,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "mirror_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2) V2",
+            "V1": "V1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a2",
+            "a4": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 396,
+        "representative_profile_id": 35,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1=0) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 402,
+        "representative_profile_id": 398,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 409,
+        "representative_profile_id": 398,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1",
+            "V1": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a2": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            4,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 497,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1 (a0) V1 (a2=0) V1^-1",
+            "V1": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            4,
+            8,
+            9,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 508,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1 (a0) V1 (a2=0) V1^-1",
+            "V1": "V2",
+            "V2": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            4,
+            5,
+            6,
+            10,
+            11,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 529,
+        "representative_profile_id": 516,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6,
+            7
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 530,
+        "representative_profile_id": 421,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0^-1 (a3) V2",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1",
+            "a3": "-a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            4,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 554,
+        "representative_profile_id": 421,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0^-1 (a2) V1",
+            "V2": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1",
+            "a3": "-a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 569,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2=0) V1^-1",
+            "V1": "V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "-a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            4,
+            5,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 602,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V1 (a2=0) V1^-1",
+            "V1": "V0^-1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "-a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            4,
+            5,
+            8,
+            9,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 616,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0^-1 (a2) V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 619,
+        "representative_profile_id": 421,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0^-1 (a2) V1",
+            "V2": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1",
+            "a3": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 702,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1 (a0) V1",
+            "V1": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 703,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1 (a0) V1",
+            "V1": "V1 (a3) V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            6,
+            8,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 704,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1 (a0) V1 (a2) V2 (a3=0) V2^-1",
+            "V1": "V1 (-a2) V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            5,
+            10,
+            12,
+            14
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 727,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V0 (a2) V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 729,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 731,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0^-1 (a3) V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            4,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 732,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 734,
+        "representative_profile_id": 2,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0 (a3) V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            4,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 773,
+        "representative_profile_id": 516,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_0",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0^-1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            3,
+            5,
+            6,
+            7
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 775,
+        "representative_profile_id": 421,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "mirror_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0",
+            "V1": "V1 (a2) V0^-1 (a3) V2",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a1",
+            "a3": "a3"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            1,
+            4,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 836,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1",
+            "V1": "V1",
+            "V2": "V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            2,
+            3,
+            4,
+            6,
+            7,
+            8
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 864,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1 (a0) V1",
+            "V1": "V2",
+            "V2": "V1"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            4,
+            5,
+            8,
+            9,
+            10
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 865,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1 (a0) V1",
+            "V1": "V2",
+            "V2": "V1 (a4) V3"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a2"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            3,
+            4,
+            5,
+            8,
+            10,
+            12
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      },
+      {
+        "schema_version": "decorated-profile-subsumption-v1",
+        "absorbed_profile_id": 866,
+        "representative_profile_id": 75,
+        "certificate": {
+          "schema_version": "decorated-profile-subsumption-v1",
+          "general_variant": "direct_pole_choice_1",
+          "refined_variant": "direct_pole_choice_0",
+          "nonerasing": true,
+          "variable_substitution": {
+            "V0": "V0 (a1) V0^-1 (a0) V1 (a2) V2 (a3=0) V2^-1",
+            "V1": "V3",
+            "V2": "V1 (-a2) V2"
+          },
+          "angle_substitution": {
+            "a0": "a0",
+            "a1": "a4"
+          },
+          "general_boundary_to_refined_boundary": [
+            0,
+            5,
+            6,
+            7,
+            12,
+            14,
+            16
+          ],
+          "scope": "contour_shape_family",
+          "copy_mappings_checked_exactly": false
+        }
+      }
+    ]
+  },
   "physical_pipeline_counts": {
-    "formal_terminal_profile_instances": 79246,
-    "rejected_by_angular_filters_under_placement_parity": 56474,
-    "additionally_rejected_by_translation_holonomy": 16,
-    "remaining_after_all_current_filters": 22756,
-    "would_be_pruned_at_placement_if_reflections_disabled": 75928
+    "formal_terminal_profile_instances_before_type_selection": 874,
+    "formal_terminal_profile_instances_selected_for_downstream_pipeline": 874,
+    "formal_terminal_profile_instances": 874,
+    "rejected_by_angular_filters_under_placement_parity": 802,
+    "additionally_rejected_by_translation_holonomy": 8,
+    "remaining_after_all_current_filters": 64,
+    "would_be_pruned_at_placement_if_reflections_disabled": 424
   },
   "comparative_parity_impact_counts": {
     "rejected_by_angular_filters_for_all_four_parity_choices": 3,
     "rejected_by_SE2_filters_for_all_four_parity_choices": 3,
-    "additionally_rejected_by_placement_time_contact_parity": 56487
+    "additionally_rejected_by_placement_time_contact_parity": 807
   },
   "experimental_pipeline_counts": {
-    "profiles_examined": 22756,
+    "profiles_examined": 64,
     "external_boundary_build_errors": 0,
-    "exact_joint_rotation_rejections": 17770,
+    "legacy_joint_rotation_diagnostic_rejections": 34,
+    "exact_joint_angle_rejections": 36,
+    "joint_angle_filter_errors": 0,
     "exact_elementary_joint_translation_rejections": 0,
     "exact_inner_forced_point_coincidence_rejections": 0,
     "exact_outer_forced_point_coincidence_rejections": 0,
     "exact_forced_point_coincidence_rejections_total": 0,
     "forced_point_filter_errors": 0,
-    "exact_encoded_model_rejections_total": 17770,
-    "additional_exact_rejections_among_core_survivors": 17770,
-    "core_survivors_after_experimental_exact_rejections": 4986,
-    "z3_problems_generated_for_core_survivors": 4986,
+    "exact_placed_copy_geometry_rejections": 0,
+    "placed_copy_geometry_errors": 0,
+    "exact_encoded_model_rejections_total": 36,
+    "additional_exact_rejections_among_core_survivors": 36,
+    "core_survivors_after_experimental_exact_rejections": 28,
+    "z3_problems_generated_for_core_survivors": 28,
     "z3_encoding_unsupported": 0,
     "z3_encoding_errors": 0,
     "z3_checks_requested": 0,
@@ -203,34 +2821,41 @@
     "z3_timeouts": 0,
     "z3_not_installed": 0,
     "z3_solver_errors_or_unknown": 0,
-    "final_survivors_after_z3_unsat_rejections": 4986
+    "final_survivors_after_z3_unsat_rejections": 7
   },
   "placement_contact_parity_counts": {
-    "DD": 3318,
-    "DR": 18263,
-    "RD": 18263,
-    "RR": 39402
+    "DD": 450,
+    "DR": 203,
+    "RD": 203,
+    "RR": 18
   },
   "pipeline_sequence": [
     "placement generation and contact parity",
     "formal equation structure audit",
-    "bounded formal word solving with depth/state/cycle-cap truncation diagnostics",
+    "exact positive word-length feasibility filter",
+    "exact residual-graph solving with finite/nested-power family compilation",
+    "independent exponent specialization for the legacy downstream pipeline",
+    "formal Voderberg type classification and optional downstream selection",
     "point-angle class resolution",
+    "specialized Straight/Mirror curve-term interpretation",
     "optional decorated-solution canonicalization including copy mappings",
     "prototype total-turn filter",
     "two-pole angle filter",
     "prototype translation-holonomy obstruction",
     "optional parity diagnostics",
     "shared inner/outer boundary construction",
-    "joint rotation filter",
+    "joint exact rational angle filter (inner, outer, and both poles)",
     "elementary joint translation filter",
-    "forced point coincidence filter",
-    "optional Z3/NLSAT polynomial filter"
+    "forced point coincidence filter on inner/outer boundaries",
+    "shared-frame three-copy coincidence and same-side overlap filter",
+    "optional Z3/NLSAT polynomial filter with pointwise global-copy isometries"
   ],
   "interpretation": {
     "z3_unsat": "Exact for the polynomial relaxation and safe for rejection.",
     "z3_sat_or_timeout": "Not a realizability proof; the profile remains a candidate.",
     "survivor_file": "geometric_filter_survivors.json",
-    "formal_equation_audit_file": "formal_equation_audit.json"
+    "formal_equation_audit_file": "formal_equation_audit.json",
+    "positive_length_filter": "Exact necessary condition for nonempty word substitutions; it is independent of geometric arc length and rejects before bounded formal branching.",
+    "voderberg_type_classifier": "Formal contact-topology compatibility only; not a geometric realizability proof."
   }
 }

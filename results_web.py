@@ -203,6 +203,13 @@ HTML_PAGE = r'''<!doctype html>
       <option value="translation">Rejet: translation</option>
     </select>
     <select id="parityFilter"><option value="all">Toutes parites</option></select>
+    <select id="voderbergTypeFilter">
+      <option value="all">Tous types formels</option>
+      <option value="type1">Voderberg type 1</option>
+      <option value="type2">Voderberg type 2</option>
+      <option value="type1+type2">Voderberg type 1 ou 2</option>
+      <option value="neither">Hors types 1/2</option>
+    </select>
     <select id="flipFilter">
       <option value="all">Tous les flips</option>
       <option value="none">Aucun flip</option>
@@ -262,6 +269,10 @@ const stageLabels = {
 function esc(value) {
   return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 }
+function clipped(value, limit = 8000) {
+  const text = String(value ?? '');
+  return text.length <= limit ? text : text.slice(0, limit) + ` … [tronque; ${text.length} caracteres]`;
+}
 function badge(text, kind) { return `<span class="badge ${kind}">${esc(text)}</span>`; }
 function statusBadge(profile) {
   const core = profile.status.retained ? badge('Retenu core', 'good') : badge(stageLabels[profile.status.stage] || profile.status.stage, 'bad');
@@ -271,7 +282,7 @@ function statusBadge(profile) {
 function flipCount(profile) { return Number(profile.mapping.A.flipped) + Number(profile.mapping.B.flipped); }
 function normalizedSearch(profile) {
   return [profile.case_id, profile.profile_id, profile.solution.profile, profile.solution.word_contour, profile.solution.contour, profile.mapping.A.display, profile.mapping.B.display,
-    ...(profile.placement.equations || []), ...(profile.status.reasons || []), profile.experimental?.status || '', profile.experimental?.reason || '', profile.solution_equivalence?.key || ''].join(' ').toLowerCase();
+    ...(profile.placement.equations || []), ...(profile.status.reasons || []), profile.experimental?.status || '', profile.experimental?.reason || '', profile.solution_equivalence?.key || '', profile.exact_formal_family?.kind || '', JSON.stringify(profile.curve_term_solution?.terms || {}), ...((profile.voderberg_type?.compatible_types) || [])].join(' ').toLowerCase();
 }
 
 function renderCards() {
@@ -279,6 +290,8 @@ function renderCards() {
   const retained = profiles.filter(p => p.status.retained).length;
   const stages = Object.fromEntries(['total_turn','pole_angles','total_turn_and_poles','translation'].map(s => [s, profiles.filter(p => p.status.stage === s).length]));
   const expRejects = profiles.filter(p => p.experimental?.exact_encoded_model_rejection).length;
+  const type1 = profiles.filter(p => (p.voderberg_type?.compatible_types || []).includes('type1')).length;
+  const type2 = profiles.filter(p => (p.voderberg_type?.compatible_types || []).includes('type2')).length;
   const expAdditional = profiles.filter(p => p.status.retained && p.experimental?.exact_encoded_model_rejection).length;
   const values = [
     ['Profils affichables', profiles.length], ['Retenus core', retained],
@@ -286,7 +299,8 @@ function renderCards() {
     ['Rejet poles', stages.pole_angles + stages.total_turn_and_poles],
     ['Rejet translation core', stages.translation],
     ['Rejets exp. encodes', expRejects],
-    ['Rejets exp. additionnels', expAdditional]
+    ['Rejets exp. additionnels', expAdditional],
+    ['Compatibles type 1', type1], ['Compatibles type 2', type2]
   ];
   document.getElementById('cards').innerHTML = values.map(([label,value]) => `<div class="card"><div class="label">${esc(label)}</div><div class="value">${value}</div></div>`).join('');
 }
@@ -315,6 +329,7 @@ function applyFilters() {
   const status = document.getElementById('statusFilter').value;
   const parity = document.getElementById('parityFilter').value;
   const flip = document.getElementById('flipFilter').value;
+  const voderbergType = document.getElementById('voderbergTypeFilter').value;
   const sortKey = document.getElementById('sortKey').value;
   const direction = document.getElementById('sortDirection').value === 'desc' ? -1 : 1;
 
@@ -324,6 +339,11 @@ function applyFilters() {
     if (status === 'rejected' && profile.status.retained) return false;
     if (!['all','retained','rejected'].includes(status) && profile.status.stage !== status) return false;
     if (parity !== 'all' && profile.placement.contact_parity !== parity) return false;
+    const compatibleTypes = profile.voderberg_type?.compatible_types || [];
+    if (voderbergType === 'type1' && !compatibleTypes.includes('type1')) return false;
+    if (voderbergType === 'type2' && !compatibleTypes.includes('type2')) return false;
+    if (voderbergType === 'type1+type2' && !compatibleTypes.some(value => value === 'type1' || value === 'type2')) return false;
+    if (voderbergType === 'neither' && compatibleTypes.some(value => value === 'type1' || value === 'type2')) return false;
     const count = flipCount(profile);
     if (flip === 'none' && count !== 0) return false;
     if (flip === 'one' && count !== 1) return false;
@@ -343,15 +363,16 @@ function renderRows() {
   const start = (state.page - 1) * state.pageSize;
   const pageProfiles = state.visible.slice(start, start + state.pageSize);
   body.innerHTML = pageProfiles.map(profile => {
+    const typeBadges = (profile.voderberg_type?.compatible_types || []).map(value => badge(value === 'type1' ? 'Type 1' : 'Type 2', 'info')).join(' ');
     const reason = profile.experimental?.exact_encoded_model_rejection ? `Couche experimentale: ${profile.experimental.status}` : (profile.status.retained ? 'Tous les filtres core passent' : (profile.status.reasons[0] || stageLabels[profile.status.stage]));
     return `<tr data-id="${profile.profile_id}">
       <td>${statusBadge(profile)}</td>
-      <td><strong>#${profile.case_id}</strong><br><span class="muted">profil ${profile.profile_id}</span>${profile.solution_equivalence?.key ? `<br><span class="muted">classe ${profile.solution_equivalence.key.slice(0, 10)}… (${profile.solution_equivalence.class_size_within_bounded_terminal_output || 1})</span>` : ''}</td>
+      <td><strong>#${profile.case_id}</strong><br><span class="muted">profil ${profile.profile_id}</span>${typeBadges ? `<br>${typeBadges}` : ''}${profile.solution_equivalence?.key ? `<br><span class="muted">classe ${profile.solution_equivalence.key.slice(0, 10)}… (${profile.solution_equivalence.class_size_within_bounded_terminal_output || 1})</span>` : ''}</td>
       <td>${badge(profile.placement.contact_parity, 'info')}<br><span class="muted">A ${profile.mapping.A.flipped ? 'flip' : 'direct'}; B ${profile.mapping.B.flipped ? 'flip' : 'direct'}</span></td>
       <td class="mapping"><div><strong>A:</strong> ${esc(profile.mapping.A.display)}</div><div><strong>B:</strong> ${esc(profile.mapping.B.display)}</div></td>
       <td class="profile mono">${esc(profile.solution.profile)}</td>
       <td>${esc(reason)}</td>
-      <td>${profile.solution.word_token_count} mots<br><span class="muted">${profile.solution.parameter_count} param.; profondeur ${profile.solution.solver_depth}</span></td>
+      <td>${profile.solution.word_token_count} mots<br><span class="muted">${profile.solution.parameter_count} param.; profondeur ${profile.solution.solver_depth}</span>${profile.exact_formal_family?.kind ? `<br>${badge(profile.exact_formal_family.kind.replace('EXACT_',''), 'info')}` : ''}</td>
     </tr>`;
   }).join('');
   const end = Math.min(start + pageProfiles.length, state.visible.length);
@@ -372,6 +393,11 @@ function showDetail(id) {
   const p = state.profiles.find(item => item.profile_id === id);
   if (!p) return;
   document.getElementById('detailTitle').innerHTML = `Case ${p.case_id}, profil ${p.profile_id} &nbsp; ${statusBadge(p)}`;
+  const typeInfo = dl([
+    ['Types compatibles', esc((p.voderberg_type?.compatible_types || []).join(', ') || 'aucun')],
+    ['Niveau', esc(p.voderberg_type?.classification_level || 'indisponible')],
+    ['Realisation geometrique prouvee', p.voderberg_type?.geometric_realizability_proved ? 'oui' : 'non']
+  ]);
   const mapping = dl([
     ['Copie A', esc(p.mapping.A.display)], ['Copie A flip', p.mapping.A.flipped ? 'oui' : 'non'],
     ['Copie B', esc(p.mapping.B.display)], ['Copie B flip', p.mapping.B.flipped ? 'oui' : 'non'],
@@ -391,6 +417,19 @@ function showDetail(id) {
     ['Derivation', esc(p.solution.derivation.join(' -> ') || '(terminale directement)')],
     ['Profondeur', p.solution.solver_depth]
   ]);
+  const exactFamily = p.exact_formal_family ? dl([
+    ['Type de famille', esc(p.exact_formal_family.kind || '')],
+    ['Expression exacte A', `<span class="mono">${esc(clipped(p.exact_formal_family.A?.text || ''))}</span>`],
+    ['Expression exacte B', `<span class="mono">${esc(clipped(p.exact_formal_family.B?.text || ''))}</span>`],
+    ['Exposants', `<span class="mono">${esc(JSON.stringify(p.exact_formal_family.exponent_parameters || {}))}</span>`],
+    ['Representant aval', `<span class="mono">${esc(JSON.stringify(p.exact_formal_family.representative_policy?.actual_assignment || {}))}</span>`],
+    ['Famille completement testee geometriquement', p.exact_formal_family.representative_policy?.complete_family_geometrically_tested ? 'oui' : 'non']
+  ]) : '<p>Profil issu du mode borne historique ou famille exacte indisponible.</p>';
+  const curveTerms = p.curve_term_solution?.terms ? dl([
+    ['Termes', Object.entries(p.curve_term_solution.terms).map(([name, term]) => `<span class="mono">${esc(name)} = ${esc(term.text || term.kind)}</span>`).join('<br>') || 'aucun'],
+    ['Classes de longueurs droites', `<span class="mono">${esc(JSON.stringify(p.curve_term_solution.straight_length_classes || {}))}</span>`],
+    ['Angles internes de courbe', esc((p.curve_term_solution.internal_curve_angle_parameters || []).join(', ') || 'aucun')]
+  ]) : '<p>Specialisation Straight/Mirror indisponible.</p>';
   const equivalence = p.solution_equivalence?.key ? dl([
     ['Cle decoree', `<span class="mono">${esc(p.solution_equivalence.key)}</span>`],
     ['Taille de classe bornee', p.solution_equivalence.class_size_within_bounded_terminal_output || 1],
@@ -420,10 +459,10 @@ function showDetail(id) {
     ['Z3/NLSAT', z3.status ? esc(z3.status) : (experimental.z3_problem ? 'probleme genere, non execute' : 'non prepare')],
     ['Portee', esc(experimental.model_scope || '')]
   ]);
-  const raw = `<pre>${esc(JSON.stringify(p, null, 2))}</pre>`;
+  const raw = `<pre>${esc(clipped(JSON.stringify(p, null, 2), 200000))}</pre>`;
   document.getElementById('detailBody').innerHTML = `<div class="detail-grid">
-    ${detailSection('Appariement', mapping)}${detailSection('Profil solution', solution)}
-    ${detailSection('Equivalence de solution', equivalence, true)}${detailSection('Filtres principaux', filterSummary, true)}${detailSection('Couche experimentale', experimentalSummary, true)}${detailSection('JSON complet', raw, true)}
+    ${detailSection('Type Voderberg formel', typeInfo)}${detailSection('Appariement', mapping)}${detailSection('Profil solution', solution)}
+    ${detailSection('Famille formelle exacte', exactFamily, true)}${detailSection('Valeurs formelles de courbes', curveTerms, true)}${detailSection('Equivalence de solution', equivalence, true)}${detailSection('Filtres principaux', filterSummary, true)}${detailSection('Couche experimentale', experimentalSummary, true)}${detailSection('JSON complet', raw, true)}
   </div>`;
   document.getElementById('detailDialog').showModal();
 }
@@ -445,7 +484,7 @@ async function init() {
   renderCards(); populateParity(); applyFilters();
 }
 
-['search','statusFilter','parityFilter','flipFilter','sortKey','sortDirection'].forEach(id => document.getElementById(id).addEventListener('input', applyFilters));
+['search','statusFilter','parityFilter','voderbergTypeFilter','flipFilter','sortKey','sortDirection'].forEach(id => document.getElementById(id).addEventListener('input', applyFilters));
 document.getElementById('closeDialog').addEventListener('click', () => document.getElementById('detailDialog').close());
 document.getElementById('detailDialog').addEventListener('click', event => { if (event.target.id === 'detailDialog') event.target.close(); });
 document.getElementById('rows').addEventListener('click', event => {

@@ -1,22 +1,729 @@
 {
   "metadata": {
     "source_survivors": "geometric_filter_survivors.json",
-    "candidate_count": 0,
+    "candidate_count": 1,
     "intermediate_points_per_variable": 3,
     "edges_per_variable": 4,
     "method": "heuristic configurable polyline templates with differential evolution",
     "proof_status": "found candidates are concrete for the configured polygonal model; failures are inconclusive",
     "transactional_checkpoint": "geometry_search_checkpoint.sqlite3",
     "search_summary": {
-      "run_key": "57460064a5bc5714dee8602743cc5536d8f68cb127b7c5bed1c1f92b25b3ae0e",
-      "selected_profile_count": 4986,
-      "completed_profile_count": 75,
-      "remaining_profile_count": 4911,
-      "found_count": 0,
-      "no_candidate_count": 75,
+      "run_key": "53e927f9ba0e7555b32bf6dbc025983edf0ddcf4050f7fa522cacfb9af5f9961",
+      "selected_profile_count": 7,
+      "completed_profile_count": 7,
+      "remaining_profile_count": 0,
+      "found_count": 1,
+      "no_candidate_count": 6,
       "error_count": 0,
-      "complete": false
+      "complete": true
     }
   },
-  "candidates": []
+  "candidates": [
+    {
+      "angle_values": {
+        "a0": 1.9223596259878608,
+        "a1": -1.746668002421457,
+        "a3": 2.778419608451994
+      },
+      "case_id": 1447,
+      "closure_error": 4.0407931795073645e-08,
+      "contact_template_constraint_max_error": 0.0,
+      "contact_template_constraints": {
+        "component_count": 2,
+        "components": [
+          {
+            "component_index": 0,
+            "effective_edge_count": 4,
+            "effective_intermediate_points": 3,
+            "forced_straight": false,
+            "free_internal_turn_parameter_count": 2,
+            "free_length_parameter_count": 4,
+            "mode": "free",
+            "representative": "W0",
+            "requested_edge_count": 4,
+            "requested_intermediate_points": 3,
+            "self_symmetry_group": [
+              "identity"
+            ],
+            "variable_transforms": {
+              "W0": "identity"
+            },
+            "variables": [
+              "W0"
+            ]
+          },
+          {
+            "component_index": 1,
+            "effective_edge_count": 4,
+            "effective_intermediate_points": 3,
+            "forced_straight": false,
+            "free_internal_turn_parameter_count": 2,
+            "free_length_parameter_count": 4,
+            "mode": "free",
+            "representative": "W1",
+            "requested_edge_count": 4,
+            "requested_intermediate_points": 3,
+            "self_symmetry_group": [
+              "identity"
+            ],
+            "variable_transforms": {
+              "W1": "identity"
+            },
+            "variables": [
+              "W1"
+            ]
+          }
+        ],
+        "enabled": true,
+        "forced_straight_variable_count": 0,
+        "kappa_reduction": {
+          "assignments": {
+            "KappaClass0": "KappaClass0",
+            "KappaClass1": "KappaClass1"
+          },
+          "forced_zero_names": [],
+          "parameter_names": [
+            "KappaClass0",
+            "KappaClass1"
+          ]
+        },
+        "relation_count": 7,
+        "relations": [
+          {
+            "copy_index": 0,
+            "left_variable": "W0",
+            "pair_index": 0,
+            "right_variable": "W0",
+            "source_position": 0,
+            "target_position": 3,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 0,
+            "left_variable": "W1",
+            "pair_index": 1,
+            "right_variable": "W1",
+            "source_position": 1,
+            "target_position": 2,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 0,
+            "left_variable": "W1",
+            "pair_index": 2,
+            "right_variable": "W1",
+            "source_position": 2,
+            "target_position": 1,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 0,
+            "left_variable": "W0",
+            "pair_index": 3,
+            "right_variable": "W0",
+            "source_position": 3,
+            "target_position": 0,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 1,
+            "left_variable": "W0",
+            "pair_index": 0,
+            "right_variable": "W0",
+            "source_position": 4,
+            "target_position": 3,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 1,
+            "left_variable": "W1",
+            "pair_index": 1,
+            "right_variable": "W1",
+            "source_position": 5,
+            "target_position": 2,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 1,
+            "left_variable": "W1",
+            "pair_index": 2,
+            "right_variable": "W1",
+            "source_position": 6,
+            "target_position": 1,
+            "transform": "identity"
+          }
+        ],
+        "requested_intermediate_points_per_variable": 3,
+        "schema_version": "curve-template-duality-v1"
+      },
+      "curve_internal_turns": {
+        "W0": [
+          -0.49589409785964833,
+          0.9235299421948003,
+          -0.5918977427029274
+        ],
+        "W1": [
+          0.15120114863791773,
+          0.4963546409322574,
+          0.5340870110962519
+        ]
+      },
+      "curve_lengths": {
+        "W0": [
+          1.1997444058225157,
+          0.3997860804679569,
+          0.8892578992713711,
+          1.0836445992202188
+        ],
+        "W1": [
+          1.6448935746852875,
+          1.5282631607473407,
+          1.097248265002683,
+          1.7591236040305673
+        ]
+      },
+      "curve_term_solution": {
+        "enabled": true,
+        "formal_relation_analysis": {
+          "component_count": 2,
+          "components": [
+            {
+              "component_index": 0,
+              "formal_mode": "free",
+              "representative": "W0",
+              "self_symmetry_group": [
+                "identity"
+              ],
+              "variable_transforms": {
+                "W0": "identity"
+              },
+              "variables": [
+                "W0"
+              ]
+            },
+            {
+              "component_index": 1,
+              "formal_mode": "free",
+              "representative": "W1",
+              "self_symmetry_group": [
+                "identity"
+              ],
+              "variable_transforms": {
+                "W1": "identity"
+              },
+              "variables": [
+                "W1"
+              ]
+            }
+          ],
+          "enabled": true,
+          "relation_count": 7,
+          "relations": [
+            {
+              "copy_index": 0,
+              "left_variable": "W0",
+              "pair_index": 0,
+              "right_variable": "W0",
+              "source_position": 0,
+              "target_position": 3,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 0,
+              "left_variable": "W1",
+              "pair_index": 1,
+              "right_variable": "W1",
+              "source_position": 1,
+              "target_position": 2,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 0,
+              "left_variable": "W1",
+              "pair_index": 2,
+              "right_variable": "W1",
+              "source_position": 2,
+              "target_position": 1,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 0,
+              "left_variable": "W0",
+              "pair_index": 3,
+              "right_variable": "W0",
+              "source_position": 3,
+              "target_position": 0,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 1,
+              "left_variable": "W0",
+              "pair_index": 0,
+              "right_variable": "W0",
+              "source_position": 4,
+              "target_position": 3,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 1,
+              "left_variable": "W1",
+              "pair_index": 1,
+              "right_variable": "W1",
+              "source_position": 5,
+              "target_position": 2,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 1,
+              "left_variable": "W1",
+              "pair_index": 2,
+              "right_variable": "W1",
+              "source_position": 6,
+              "target_position": 1,
+              "transform": "identity"
+            }
+          ],
+          "schema_version": "curve-relation-algebra-v1"
+        },
+        "generic_word_solver_modified": false,
+        "internal_curve_angle_parameters": [],
+        "interpretation_stage": "after_generic_word_solving_before_geometry",
+        "mirror_and_inverse_commute": true,
+        "numeric_geometry_embedded": false,
+        "schema_version": "curve-term-solution-v2",
+        "straight_length_classes": {},
+        "terms": {
+          "W0": {
+            "component_index": 0,
+            "formal_value_not_numeric_constraint": true,
+            "kind": "curve_parameter",
+            "name": "C0",
+            "source_component_mode": "free",
+            "text": "C0",
+            "transform_from_representative": "identity"
+          },
+          "W1": {
+            "component_index": 1,
+            "formal_value_not_numeric_constraint": true,
+            "kind": "curve_parameter",
+            "name": "C1",
+            "source_component_mode": "free",
+            "text": "C1",
+            "transform_from_representative": "identity"
+          }
+        }
+      },
+      "edge_metadata": [
+        {
+          "end_vertex": 1,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 0,
+          "start_vertex": 0,
+          "subedge": 0,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 2,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 0,
+          "start_vertex": 1,
+          "subedge": 1,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 3,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 0,
+          "start_vertex": 2,
+          "subedge": 2,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 4,
+          "formal_occurrence_end_vertex": 4,
+          "formal_occurrence_start_vertex": 0,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 0,
+          "start_vertex": 3,
+          "subedge": 3,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 5,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 1,
+          "start_vertex": 4,
+          "subedge": 0,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 6,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 1,
+          "start_vertex": 5,
+          "subedge": 1,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 7,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 1,
+          "start_vertex": 6,
+          "subedge": 2,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 8,
+          "formal_occurrence_end_vertex": 8,
+          "formal_occurrence_start_vertex": 4,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 1,
+          "start_vertex": 7,
+          "subedge": 3,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 9,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 2,
+          "start_vertex": 8,
+          "subedge": 0,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 10,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 2,
+          "start_vertex": 9,
+          "subedge": 1,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 11,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 2,
+          "start_vertex": 10,
+          "subedge": 2,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 12,
+          "formal_occurrence_end_vertex": 12,
+          "formal_occurrence_start_vertex": 8,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 2,
+          "start_vertex": 11,
+          "subedge": 3,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 13,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 3,
+          "start_vertex": 12,
+          "subedge": 0,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 14,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 3,
+          "start_vertex": 13,
+          "subedge": 1,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 15,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 3,
+          "start_vertex": 14,
+          "subedge": 2,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 16,
+          "formal_occurrence_end_vertex": 16,
+          "formal_occurrence_start_vertex": 12,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 3,
+          "start_vertex": 15,
+          "subedge": 3,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 17,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 4,
+          "start_vertex": 16,
+          "subedge": 0,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 18,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 4,
+          "start_vertex": 17,
+          "subedge": 1,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 19,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 4,
+          "start_vertex": 18,
+          "subedge": 2,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 20,
+          "formal_occurrence_end_vertex": 20,
+          "formal_occurrence_start_vertex": 16,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 4,
+          "start_vertex": 19,
+          "subedge": 3,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 21,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 5,
+          "start_vertex": 20,
+          "subedge": 0,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 22,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 5,
+          "start_vertex": 21,
+          "subedge": 1,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 23,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 5,
+          "start_vertex": 22,
+          "subedge": 2,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 24,
+          "formal_occurrence_end_vertex": 24,
+          "formal_occurrence_start_vertex": 20,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 5,
+          "start_vertex": 23,
+          "subedge": 3,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 25,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 6,
+          "start_vertex": 24,
+          "subedge": 0,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 26,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 6,
+          "start_vertex": 25,
+          "subedge": 1,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 27,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 6,
+          "start_vertex": 26,
+          "subedge": 2,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 28,
+          "formal_occurrence_end_vertex": 28,
+          "formal_occurrence_start_vertex": 24,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 6,
+          "start_vertex": 27,
+          "subedge": 3,
+          "variable": "W1"
+        }
+      ],
+      "effective_intermediate_points_by_variable": {
+        "W0": 3,
+        "W1": 3
+      },
+      "formal_profile": "(P0 = a0) W0 (-a1) W1 (a2 = 0) W1^-1 (a1) W0^-1 (P1 = a3) W0 (-a1) W1 (a2 = 0) W1^-1",
+      "intermediate_points_per_variable": 3,
+      "kappa_class_values": {
+        "KappaClass0": -0.1642618983677754,
+        "KappaClass1": 1.181642800666427
+      },
+      "model": {
+        "curve_template": "up to 3 intermediate point(s) per formal variable, reduced by exact contact symmetries",
+        "limitations": "This certifies the displayed prototype contour and exact local curve-template compatibility for every terminal contact pair in the restricted polygonal model. It does not yet certify full three-copy non-overlap or absence of parasitic contacts.",
+        "status": "heuristic geometric candidate"
+      },
+      "objective": 3.755883653236559e-12,
+      "profile_id": 428,
+      "signed_area": 15.959644886147103,
+      "turn_error": 3.131395054367658e-08,
+      "vertices": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.1997444058225157,
+          0.0
+        ],
+        [
+          1.5513737076127807,
+          -0.19022550895824258
+        ],
+        [
+          2.3605528268329086,
+          0.17856815209719112
+        ],
+        [
+          3.4296108345506164,
+          0.0013660258294896643
+        ],
+        [
+          3.410514415532136,
+          1.6461487466840146
+        ],
+        [
+          3.1627942719980036,
+          3.1542014708899293
+        ],
+        [
+          2.4907764054132238,
+          4.021580132168981
+        ],
+        [
+          0.855542762886653,
+          4.670060500882464
+        ],
+        [
+          -0.7796908796399178,
+          5.318540869595947
+        ],
+        [
+          -1.4517087462246976,
+          6.185919530874998
+        ],
+        [
+          -1.6994288897588299,
+          7.693972255080913
+        ],
+        [
+          -1.7185253087773105,
+          9.338754975935439
+        ],
+        [
+          -0.6494673010596028,
+          9.161552849667737
+        ],
+        [
+          0.15971181816052504,
+          9.53034651072317
+        ],
+        [
+          0.51134111995079,
+          9.340121001764928
+        ],
+        [
+          1.7110855257733057,
+          9.340121001764928
+        ],
+        [
+          0.5895952501189687,
+          9.766320721280533
+        ],
+        [
+          0.32847731324022444,
+          10.06905217517345
+        ],
+        [
+          -0.5589335912840308,
+          10.011767814760026
+        ],
+        [
+          -1.495311921369062,
+          10.557186223292701
+        ],
+        [
+          -2.0617571431722466,
+          9.012901701989296
+        ],
+        [
+          -2.365918524749101,
+          7.515212100484796
+        ],
+        [
+          -2.0458628875431066,
+          6.465679755035612
+        ],
+        [
+          -0.7476559780543204,
+          5.278593121965782
+        ],
+        [
+          0.5505509314344659,
+          4.091506488895952
+        ],
+        [
+          0.8706065686404599,
+          3.0419741434467693
+        ],
+        [
+          0.5664451870636069,
+          1.544284541942268
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "voderberg_type": {
+        "classification_level": "formal_contact_topology",
+        "compatible_types": [
+          "type1"
+        ]
+      }
+    }
+  ]
 }

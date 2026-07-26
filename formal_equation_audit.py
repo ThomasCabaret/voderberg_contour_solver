@@ -35,6 +35,7 @@ class SolverSearchAudit:
     cycle_unroll_pruned_state_count: int = 0
     cycle_unroll_cap_hit: bool = False
     initial_inconsistent: bool = False
+    skipped_by_positive_length_filter: bool = False
 
     @property
     def search_truncated(self) -> bool:
@@ -46,7 +47,15 @@ class SolverSearchAudit:
 
     @property
     def search_exhausted_within_current_graph(self) -> bool:
-        return not self.initial_inconsistent and not self.search_truncated
+        return (
+            not self.initial_inconsistent
+            and not self.skipped_by_positive_length_filter
+            and not self.search_truncated
+        )
+
+    @property
+    def submitted_to_branching_solver(self) -> bool:
+        return not self.initial_inconsistent and not self.skipped_by_positive_length_filter
 
     @property
     def has_terminal_profiles(self) -> bool:
@@ -72,6 +81,8 @@ class SolverSearchAudit:
     def search_outcome_class(self) -> str:
         if self.initial_inconsistent:
             return "initially_inconsistent"
+        if self.skipped_by_positive_length_filter:
+            return "positive_length_inconsistent"
         if self.search_truncated:
             return (
                 "truncated_with_terminal_profiles"
@@ -87,6 +98,8 @@ class SolverSearchAudit:
     def to_dict(self) -> Dict[str, object]:
         return {
             "initial_inconsistent": self.initial_inconsistent,
+            "skipped_by_positive_length_filter": self.skipped_by_positive_length_filter,
+            "submitted_to_branching_solver": self.submitted_to_branching_solver,
             "visited_states": self.visited_states,
             "unique_depth_states": self.unique_depth_states,
             "duplicate_depth_states_skipped": self.duplicate_depth_states_skipped,
@@ -120,6 +133,26 @@ class SolverSearchAudit:
             "terminal_profile_set_complete_within_current_graph": self.terminal_profile_set_complete_within_current_graph,
             "no_terminal_after_exhausting_current_graph": self.no_terminal_after_exhausting_current_graph,
         }
+
+
+def positive_length_rejection_audit(*, initial_inconsistent: bool) -> SolverSearchAudit:
+    """Record an exact pre-solver rejection without pretending a graph was explored."""
+    return SolverSearchAudit(
+        terminal_states=(),
+        visited_states=0,
+        unique_depth_states=0,
+        duplicate_depth_states_skipped=0,
+        maximum_depth_reached=0,
+        depth_frontier_cut_count=0,
+        state_limit_hit=False,
+        queue_size_when_state_limit_hit=0,
+        residual_equation_revisit_count=0,
+        structural_state_revisit_count=0,
+        terminal_count=0,
+        branch_counts=(),
+        initial_inconsistent=initial_inconsistent,
+        skipped_by_positive_length_filter=not initial_inconsistent,
+    )
 
 
 def _equation_variables(equation: base.Equation) -> set[str]:
@@ -404,6 +437,10 @@ def summarize_case_audits(case_records: Sequence[Mapping[str, object]]) -> Dict[
     truncated_by_class: Counter[str] = Counter()
     outcome_counts: Counter[str] = Counter()
     outcome_counts_by_occurrence_class: Dict[str, Counter[str]] = defaultdict(Counter)
+    positive_length_filter_enabled = any(
+        bool(record.get("positive_length_filter", {}).get("enabled_for_rejection", False))
+        for record in case_records
+    )
 
     for record in case_records:
         structure = record["structure"]
@@ -426,7 +463,19 @@ def summarize_case_audits(case_records: Sequence[Mapping[str, object]]) -> Dict[
     quadratic_cases = sum(
         1 for record in case_records if record["structure"]["is_quadratic_system"]
     )
+    positive_length_infeasible_detected = sum(
+        1
+        for record in case_records
+        if not bool(record.get("positive_length_filter", {}).get("feasible", True))
+    )
+    positive_length_filter_rejected = sum(
+        1
+        for record in case_records
+        if bool(record.get("positive_length_filter", {}).get("enabled_for_rejection", False))
+        and not bool(record.get("positive_length_filter", {}).get("feasible", True))
+    )
     initial_inconsistent_cases = outcome_counts["initially_inconsistent"]
+    additional_positive_length_rejections = outcome_counts["positive_length_inconsistent"]
     cases_with_terminals = sum(
         1 for record in case_records if record["bounded_search"]["terminal_count"] > 0
     )
@@ -474,7 +523,19 @@ def summarize_case_audits(case_records: Sequence[Mapping[str, object]]) -> Dict[
     truncated_without_terminals = outcome_counts["truncated_without_terminal_profiles"]
     exhausted_with_terminals = outcome_counts["exhausted_with_terminal_profiles"]
     exhausted_without_terminals = outcome_counts["exhausted_without_terminal_profiles"]
-    submitted_to_branching_solver = len(case_records) - initial_inconsistent_cases
+    submitted_to_branching_solver = sum(
+        1
+        for record in case_records
+        if bool(
+            record["bounded_search"].get(
+                "submitted_to_branching_solver",
+                not record["bounded_search"].get("initial_inconsistent", False)
+                and not record["bounded_search"].get(
+                    "skipped_by_positive_length_filter", False
+                ),
+            )
+        )
+    )
 
     return {
         "placement_system_count": len(case_records),
@@ -483,6 +544,14 @@ def summarize_case_audits(case_records: Sequence[Mapping[str, object]]) -> Dict[
         "contains_involution_case_count": involutive_cases,
         "at_most_once_per_equation_side_case_count": once_per_side_cases,
         "initially_inconsistent_case_count": initial_inconsistent_cases,
+        "positive_length_filter_enabled": positive_length_filter_enabled,
+        "positive_length_infeasible_case_count_detected": positive_length_infeasible_detected,
+        "positive_length_feasible_case_count": len(case_records) - positive_length_infeasible_detected,
+        "positive_length_filter_rejected_case_count": positive_length_filter_rejected,
+        "positive_length_rejections_already_initially_inconsistent_case_count": (
+            positive_length_filter_rejected - additional_positive_length_rejections
+        ),
+        "additional_positive_length_rejections_before_branching_case_count": additional_positive_length_rejections,
         "submitted_to_branching_solver_case_count": submitted_to_branching_solver,
         "cases_with_terminal_profiles_within_bounds": cases_with_terminals,
         "cases_without_terminal_profiles_within_bounds": len(case_records) - cases_with_terminals,
@@ -516,6 +585,7 @@ def summarize_case_audits(case_records: Sequence[Mapping[str, object]]) -> Dict[
         "truncated_case_count_by_occurrence_class": dict(sorted(truncated_by_class.items())),
         "interpretation": {
             "quadratic": "Every initial variable occurs at most twice across all equation sides.",
+            "positive_length_filter": "Every formal variable denotes a nonempty word and therefore has a strictly positive integer length. A system is rejected when its two induced length equalities have no such assignment.",
             "search_exhausted": "The current transition-system exploration emptied its queue without hitting either configured bound.",
             "search_truncated_with_terminals": "At least one terminal profile was found, but more terminal profiles may exist beyond the configured bounds.",
             "search_truncated_without_terminals": "No terminal profile was found, and existence remains unresolved because a configured depth/state bound or the temporary cycle-unroll cap was hit.",
