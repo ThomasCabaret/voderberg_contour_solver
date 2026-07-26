@@ -2,9 +2,10 @@
 """Sequential bounded audit of formal Voderberg contour profiles.
 
 Every independent filter has its own pass over the profile collection.  Fast
-filters are evaluated for all terminal profiles so the detailed report retains
-complete per-filter diagnostics.  Expensive shared-boundary and Z3 stages are
-cascaded and receive only profiles that survived every preceding filter.
+formal and local filters are evaluated before the geometric cascade.  Expensive
+shared-boundary and Z3 stages receive only primitive canonical profiles that
+survived every preceding filter; symmetry-equivalent and subsumed profiles keep
+an audit link to their representative instead of being recomputed.
 """
 from __future__ import annotations
 
@@ -24,7 +25,7 @@ import curve_term_solver
 import forced_point_coincidence as forced_points
 import formal_equation_audit as formal_audit
 import joint_translation_z3 as z3_backend
-import joint_angle_feasibility as joint_angles
+import global_linear_contour_filter as global_linear
 import placed_copy_geometry as placed_geometry
 import method_status
 import positive_length_filter
@@ -86,8 +87,8 @@ class ProfileWork:
     holonomy: object | None = None
     external_system: Optional[external.JointBoundarySystem] = None
     external_error: Optional[str] = None
-    joint_angle_analysis: Optional[joint_angles.JointAngleFeasibility] = None
-    joint_angle_error: Optional[str] = None
+    global_linear_analysis: Optional[global_linear.GlobalLinearContourAnalysis] = None
+    global_linear_error: Optional[str] = None
     inner_points: Optional[forced_points.ForcedPointCoincidenceAnalysis] = None
     outer_points: Optional[forced_points.ForcedPointCoincidenceAnalysis] = None
     forced_point_error: Optional[str] = None
@@ -136,10 +137,10 @@ class ProfileWork:
         )
 
     @property
-    def joint_angle_pass(self) -> bool:
+    def global_linear_pass(self) -> bool:
         return bool(
-            self.joint_angle_analysis is not None
-            and self.joint_angle_analysis.feasible
+            self.global_linear_analysis is not None
+            and self.global_linear_analysis.feasible
         )
 
     @property
@@ -170,8 +171,8 @@ class ProfileWork:
         return bool(
             self.core_pass
             and self.external_error is None
-            and self.joint_angle_error is None
-            and self.joint_angle_pass
+            and self.global_linear_error is None
+            and self.global_linear_pass
             and self.joint_translation_pass
             and self.forced_point_error is None
             and self.forced_point_pass
@@ -205,10 +206,10 @@ class ProfileWork:
             return "core_translation"
         if self.external_error:
             return "external_boundary_error"
-        if self.joint_angle_error:
-            return "joint_angle_error"
-        if self.joint_angle_analysis is not None and not self.joint_angle_analysis.feasible:
-            return "joint_angles"
+        if self.global_linear_error:
+            return "global_linear_contour_error"
+        if self.global_linear_analysis is not None and not self.global_linear_analysis.feasible:
+            return "global_linear_contours"
         if self.external_system is not None and self.external_system.translation_analysis.exact_obstruction:
             return "joint_translation"
         if self.forced_point_error:
@@ -247,10 +248,10 @@ class ProfileWork:
             return self.holonomy.translation.discard_reason
         if stage == "external_boundary_error":
             return self.external_error
-        if stage == "joint_angle_error":
-            return self.joint_angle_error
-        if stage == "joint_angles":
-            return self.joint_angle_analysis.discard_reason
+        if stage == "global_linear_contour_error":
+            return self.global_linear_error
+        if stage == "global_linear_contours":
+            return self.global_linear_analysis.discard_reason
         if stage == "joint_translation":
             return self.external_system.translation_analysis.reason
         if stage == "forced_point_error":
@@ -287,9 +288,18 @@ def _variant_passes(case: base.PlacementCase, state: base.SolverState, signs: Tu
 
 def _experimental_record(work: ProfileWork) -> Dict[str, object]:
     if work.external_system is None:
+        if not work.formal_reduction_pass:
+            status = "not_run_after_formal_profile_reduction"
+            reason = work.final_reason()
+        elif not work.core_pass:
+            status = "not_run_after_core_rejection"
+            reason = work.final_reason()
+        else:
+            status = "external_boundary_error"
+            reason = work.external_error
         return {
-            "status": "not_run_after_core_rejection" if not work.core_pass else "external_boundary_error",
-            "reason": work.external_error,
+            "status": status,
+            "reason": reason,
             "affects_core_status": False,
             "exact_encoded_model_rejection": False,
             "external_boundary": None,
@@ -297,12 +307,12 @@ def _experimental_record(work: ProfileWork) -> Dict[str, object]:
             "z3_result": None,
         }
 
-    if work.joint_angle_error:
-        status = "joint_angle_filter_error"
-        reason = work.joint_angle_error
-    elif work.joint_angle_analysis is not None and not work.joint_angle_analysis.feasible:
-        status = "exact_joint_angle_reject"
-        reason = work.joint_angle_analysis.discard_reason
+    if work.global_linear_error:
+        status = "global_linear_contour_filter_error"
+        reason = work.global_linear_error
+    elif work.global_linear_analysis is not None and not work.global_linear_analysis.feasible:
+        status = "exact_global_linear_contour_reject"
+        reason = work.global_linear_analysis.discard_reason
     elif work.external_system.translation_analysis.exact_obstruction:
         status = "exact_joint_translation_reject"
         reason = work.external_system.translation_analysis.reason
@@ -334,7 +344,7 @@ def _experimental_record(work: ProfileWork) -> Dict[str, object]:
         external_system=work.external_system,
         inner_point_coincidence=work.inner_points,
         outer_point_coincidence=work.outer_points,
-        joint_angle_analysis=work.joint_angle_analysis,
+        global_linear_analysis=work.global_linear_analysis,
         placed_copy_analysis=work.placed_copy_analysis,
         z3_problem=work.z3_problem,
         z3_result=work.z3_result,
@@ -359,7 +369,7 @@ def _pipeline_flags(work: ProfileWork) -> Dict[str, object]:
         "core_pass": work.core_pass,
         "external_boundary_built": work.external_system is not None,
         "joint_rotation_diagnostic_pass": work.joint_rotation_pass,
-        "joint_angle_pass": work.joint_angle_pass,
+        "global_linear_contour_pass": work.global_linear_pass,
         "joint_translation_pass": work.joint_translation_pass,
         "forced_point_pass": work.forced_point_pass,
         "placed_copy_pass": work.placed_copy_pass,
@@ -969,7 +979,10 @@ def audit(
             len(angle_ready),
             f"profiles processed: {index}/{len(angle_ready)}; exact obstructions: {translation_rejects_all}",
         )
-    core_survivors = [work for work in pipeline_works if work.core_pass]
+    core_survivors = [
+        work for work in pipeline_works
+        if work.formal_reduction_pass and work.core_pass
+    ]
     progress.done(
         f"{translation_rejects_all} translation obstructions total; "
         f"{additional_translation_rejects} additional; {len(core_survivors)} core survivors"
@@ -1014,40 +1027,51 @@ def audit(
     stage += 1
     progress.stage(
         stage, stage_total,
-        "Solving one exact rational system for inner/outer turns and both poles",
+        "Solving the exact global linear contour filter (inner/outer turns, poles, principal boundary turns, and perimeters)",
     )
-    joint_angle_rejects = 0
-    joint_angle_errors = 0
+    global_linear_rejects = 0
+    global_linear_errors = 0
+    global_linear_angular_rejects = 0
+    global_linear_length_rejects = 0
     for index, work in enumerate(built, start=1):
         try:
-            work.joint_angle_analysis = joint_angles.analyze_joint_angle_feasibility(
-                work.external_system.rotation_equations, work.pole_angles
+            work.global_linear_analysis = global_linear.analyze_global_linear_contours(
+                work.external_system, work.pole_angles
             )
-            joint_angle_rejects += int(not work.joint_angle_analysis.feasible)
+            if not work.global_linear_analysis.feasible:
+                global_linear_rejects += 1
+                global_linear_angular_rejects += int(
+                    not work.global_linear_analysis.angle_block.feasible
+                )
+                global_linear_length_rejects += int(
+                    work.global_linear_analysis.angle_block.feasible
+                    and not work.global_linear_analysis.length_block.feasible
+                )
         except Exception as exc:
-            work.joint_angle_error = f"{type(exc).__name__}: {exc}"
-            joint_angle_errors += 1
+            work.global_linear_error = f"{type(exc).__name__}: {exc}"
+            global_linear_errors += 1
         progress.update(
             index, len(built),
-            f"profiles processed: {index}/{len(built)}; rejected: {joint_angle_rejects}; errors: {joint_angle_errors}",
+            f"profiles processed: {index}/{len(built)}; rejected: {global_linear_rejects}; errors: {global_linear_errors}",
         )
-    after_joint_angles = [
+    after_global_linear = [
         work for work in built
-        if work.joint_angle_error is None and work.joint_angle_pass
+        if work.global_linear_error is None and work.global_linear_pass
     ]
     progress.done(
-        f"{joint_angle_rejects} rejected; {joint_angle_errors} errors; "
-        f"{len(after_joint_angles)} survivors"
+        f"{global_linear_rejects} rejected "
+        f"({global_linear_angular_rejects} angular, {global_linear_length_rejects} length); "
+        f"{global_linear_errors} errors; {len(after_global_linear)} survivors"
     )
 
     stage += 1
     progress.stage(stage, stage_total, "Checking exact elementary joint translation obstructions")
     joint_translation_rejects = 0
-    for index, work in enumerate(after_joint_angles, start=1):
+    for index, work in enumerate(after_global_linear, start=1):
         if not work.joint_translation_pass:
             joint_translation_rejects += 1
-        progress.update(index, len(after_joint_angles), f"profiles processed: {index}/{len(after_joint_angles)}; rejected: {joint_translation_rejects}")
-    after_joint_translation = [work for work in after_joint_angles if work.joint_translation_pass]
+        progress.update(index, len(after_global_linear), f"profiles processed: {index}/{len(after_global_linear)}; rejected: {joint_translation_rejects}")
+    after_joint_translation = [work for work in after_global_linear if work.joint_translation_pass]
     progress.done(f"{joint_translation_rejects} additional rejects; {len(after_joint_translation)} survivors")
 
     stage += 1
@@ -1194,24 +1218,30 @@ def audit(
         "formal_terminal_profile_instances": len(pipeline_works),
         "rejected_by_angular_filters_under_placement_parity": angular_unique_rejects,
         "additionally_rejected_by_translation_holonomy": additional_translation_rejects,
+        "primitive_profiles_reaching_shared_boundary_filters": len(core_survivors),
         "remaining_after_all_current_filters": len(core_survivors),
         "would_be_pruned_at_placement_if_reflections_disabled": sum(
             1 for work in pipeline_works if work.terminal.case.requires_reflection
         ),
     }
     exact_model_rejects = (
-        external_errors + joint_angle_rejects + joint_angle_errors
+        external_errors + global_linear_rejects + global_linear_errors
         + joint_translation_rejects + forced_rejects + forced_errors
         + placed_copy_rejects + placed_copy_errors
     )
     experimental_counts = {
         "profiles_examined": len(core_survivors),
+        "formal_reduction_skipped_profile_count": sum(
+            1 for work in pipeline_works if not work.formal_reduction_pass
+        ),
         "external_boundary_build_errors": external_errors,
         "legacy_joint_rotation_diagnostic_rejections": sum(
             1 for work in built if not work.joint_rotation_pass
         ),
-        "exact_joint_angle_rejections": joint_angle_rejects,
-        "joint_angle_filter_errors": joint_angle_errors,
+        "exact_global_linear_contour_rejections": global_linear_rejects,
+        "global_linear_angular_rejections": global_linear_angular_rejects,
+        "global_linear_length_rejections": global_linear_length_rejects,
+        "global_linear_contour_filter_errors": global_linear_errors,
         "exact_elementary_joint_translation_rejections": joint_translation_rejects,
         "exact_inner_forced_point_coincidence_rejections": inner_forced_rejects,
         "exact_outer_forced_point_coincidence_rejections": outer_forced_rejects,
@@ -1421,7 +1451,7 @@ def audit(
             "prototype translation-holonomy obstruction",
             "optional parity diagnostics",
             "shared inner/outer boundary construction",
-            "joint exact rational angle filter (inner, outer, and both poles)",
+            "exact global linear contour filter (inner/outer turns, principal point turns, poles, and normalized perimeters)",
             "elementary joint translation filter",
             "forced point coincidence filter on inner/outer boundaries",
             "shared-frame three-copy coincidence and same-side overlap filter",

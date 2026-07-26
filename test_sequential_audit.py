@@ -19,7 +19,7 @@ class SequentialAuditTests(unittest.TestCase):
         )
         self.assertIn("pipeline_sequence", result)
         counts = result["experimental_pipeline_counts"]
-        self.assertIn("exact_joint_angle_rejections", counts)
+        self.assertIn("exact_global_linear_contour_rejections", counts)
         self.assertIn("exact_placed_copy_geometry_rejections", counts)
         self.assertIn("final_survivors_after_z3_unsat_rejections", counts)
         self.assertEqual(

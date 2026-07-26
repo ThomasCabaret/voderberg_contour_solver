@@ -1,19 +1,19 @@
 {
   "metadata": {
     "source_survivors": "geometric_filter_survivors.json",
-    "candidate_count": 1,
-    "intermediate_points_per_variable": 3,
-    "edges_per_variable": 4,
+    "candidate_count": 2,
+    "intermediate_points_per_variable": 2,
+    "edges_per_variable": 3,
     "method": "heuristic configurable polyline templates with differential evolution",
     "proof_status": "found candidates are concrete for the configured polygonal model; failures are inconclusive",
     "transactional_checkpoint": "geometry_search_checkpoint.sqlite3",
     "search_summary": {
-      "run_key": "53e927f9ba0e7555b32bf6dbc025983edf0ddcf4050f7fa522cacfb9af5f9961",
+      "run_key": "082fb34fd220a50d8ae3a8b55e51a9e5287b022fe052fd93832ccd5f4daa7e40",
       "selected_profile_count": 7,
       "completed_profile_count": 7,
       "remaining_profile_count": 0,
-      "found_count": 1,
-      "no_candidate_count": 6,
+      "found_count": 2,
+      "no_candidate_count": 5,
       "error_count": 0,
       "complete": true
     }
@@ -21,27 +21,27 @@
   "candidates": [
     {
       "angle_values": {
-        "a0": 1.9223596259878608,
-        "a1": -1.746668002421457,
-        "a3": 2.778419608451994
+        "a0": 0.8146783239934119,
+        "a1": 3.1013054809315723,
+        "a3": 3.0893694842005837
       },
       "case_id": 1447,
-      "closure_error": 4.0407931795073645e-08,
+      "closure_error": 1.005176418251545e-08,
       "contact_template_constraint_max_error": 0.0,
       "contact_template_constraints": {
         "component_count": 2,
         "components": [
           {
             "component_index": 0,
-            "effective_edge_count": 4,
-            "effective_intermediate_points": 3,
+            "effective_edge_count": 3,
+            "effective_intermediate_points": 2,
             "forced_straight": false,
-            "free_internal_turn_parameter_count": 2,
-            "free_length_parameter_count": 4,
+            "free_internal_turn_parameter_count": 1,
+            "free_length_parameter_count": 3,
             "mode": "free",
             "representative": "W0",
-            "requested_edge_count": 4,
-            "requested_intermediate_points": 3,
+            "requested_edge_count": 3,
+            "requested_intermediate_points": 2,
             "self_symmetry_group": [
               "identity"
             ],
@@ -54,15 +54,508 @@
           },
           {
             "component_index": 1,
-            "effective_edge_count": 4,
-            "effective_intermediate_points": 3,
+            "effective_edge_count": 3,
+            "effective_intermediate_points": 2,
             "forced_straight": false,
-            "free_internal_turn_parameter_count": 2,
-            "free_length_parameter_count": 4,
+            "free_internal_turn_parameter_count": 1,
+            "free_length_parameter_count": 3,
             "mode": "free",
             "representative": "W1",
-            "requested_edge_count": 4,
-            "requested_intermediate_points": 3,
+            "requested_edge_count": 3,
+            "requested_intermediate_points": 2,
+            "self_symmetry_group": [
+              "identity"
+            ],
+            "variable_transforms": {
+              "W1": "identity"
+            },
+            "variables": [
+              "W1"
+            ]
+          }
+        ],
+        "enabled": true,
+        "forced_straight_variable_count": 0,
+        "kappa_reduction": {
+          "assignments": {
+            "KappaClass0": "KappaClass0",
+            "KappaClass1": "KappaClass1"
+          },
+          "forced_zero_names": [],
+          "parameter_names": [
+            "KappaClass0",
+            "KappaClass1"
+          ]
+        },
+        "relation_count": 5,
+        "relations": [
+          {
+            "copy_index": 0,
+            "left_variable": "W0",
+            "pair_index": 0,
+            "right_variable": "W0",
+            "source_position": 0,
+            "target_position": 3,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 0,
+            "left_variable": "W1",
+            "pair_index": 1,
+            "right_variable": "W1",
+            "source_position": 1,
+            "target_position": 2,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 0,
+            "left_variable": "W1",
+            "pair_index": 2,
+            "right_variable": "W1",
+            "source_position": 2,
+            "target_position": 1,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 0,
+            "left_variable": "W0",
+            "pair_index": 3,
+            "right_variable": "W0",
+            "source_position": 3,
+            "target_position": 0,
+            "transform": "identity"
+          },
+          {
+            "copy_index": 1,
+            "left_variable": "W0",
+            "pair_index": 0,
+            "right_variable": "W0",
+            "source_position": 4,
+            "target_position": 3,
+            "transform": "identity"
+          }
+        ],
+        "requested_intermediate_points_per_variable": 2,
+        "schema_version": "curve-template-duality-v1"
+      },
+      "curve_internal_turns": {
+        "W0": [
+          -0.853313983579382,
+          -1.5258234991900284
+        ],
+        "W1": [
+          -1.5662846236944432,
+          1.1278411452381332
+        ]
+      },
+      "curve_lengths": {
+        "W0": [
+          1.3085496292671925,
+          1.3628108444846223,
+          0.4153237457952311
+        ],
+        "W1": [
+          0.534993673418883,
+          0.3451244325534155,
+          0.5244512506950941
+        ]
+      },
+      "curve_term_solution": {
+        "enabled": true,
+        "formal_relation_analysis": {
+          "component_count": 2,
+          "components": [
+            {
+              "component_index": 0,
+              "formal_mode": "free",
+              "representative": "W0",
+              "self_symmetry_group": [
+                "identity"
+              ],
+              "variable_transforms": {
+                "W0": "identity"
+              },
+              "variables": [
+                "W0"
+              ]
+            },
+            {
+              "component_index": 1,
+              "formal_mode": "free",
+              "representative": "W1",
+              "self_symmetry_group": [
+                "identity"
+              ],
+              "variable_transforms": {
+                "W1": "identity"
+              },
+              "variables": [
+                "W1"
+              ]
+            }
+          ],
+          "enabled": true,
+          "relation_count": 5,
+          "relations": [
+            {
+              "copy_index": 0,
+              "left_variable": "W0",
+              "pair_index": 0,
+              "right_variable": "W0",
+              "source_position": 0,
+              "target_position": 3,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 0,
+              "left_variable": "W1",
+              "pair_index": 1,
+              "right_variable": "W1",
+              "source_position": 1,
+              "target_position": 2,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 0,
+              "left_variable": "W1",
+              "pair_index": 2,
+              "right_variable": "W1",
+              "source_position": 2,
+              "target_position": 1,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 0,
+              "left_variable": "W0",
+              "pair_index": 3,
+              "right_variable": "W0",
+              "source_position": 3,
+              "target_position": 0,
+              "transform": "identity"
+            },
+            {
+              "copy_index": 1,
+              "left_variable": "W0",
+              "pair_index": 0,
+              "right_variable": "W0",
+              "source_position": 4,
+              "target_position": 3,
+              "transform": "identity"
+            }
+          ],
+          "schema_version": "curve-relation-algebra-v1"
+        },
+        "generic_word_solver_modified": false,
+        "internal_curve_angle_parameters": [],
+        "interpretation_stage": "after_generic_word_solving_before_geometry",
+        "mirror_and_inverse_commute": true,
+        "numeric_geometry_embedded": false,
+        "schema_version": "curve-term-solution-v2",
+        "straight_length_classes": {},
+        "terms": {
+          "W0": {
+            "component_index": 0,
+            "formal_value_not_numeric_constraint": true,
+            "kind": "curve_parameter",
+            "name": "C0",
+            "source_component_mode": "free",
+            "text": "C0",
+            "transform_from_representative": "identity"
+          },
+          "W1": {
+            "component_index": 1,
+            "formal_value_not_numeric_constraint": true,
+            "kind": "curve_parameter",
+            "name": "C1",
+            "source_component_mode": "free",
+            "text": "C1",
+            "transform_from_representative": "identity"
+          }
+        }
+      },
+      "edge_metadata": [
+        {
+          "end_vertex": 1,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 0,
+          "start_vertex": 0,
+          "subedge": 0,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 2,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 0,
+          "start_vertex": 1,
+          "subedge": 1,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 3,
+          "formal_occurrence_end_vertex": 3,
+          "formal_occurrence_start_vertex": 0,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 0,
+          "start_vertex": 2,
+          "subedge": 2,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 4,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 1,
+          "start_vertex": 3,
+          "subedge": 0,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 5,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 1,
+          "start_vertex": 4,
+          "subedge": 1,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 6,
+          "formal_occurrence_end_vertex": 6,
+          "formal_occurrence_start_vertex": 3,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 1,
+          "start_vertex": 5,
+          "subedge": 2,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 7,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 2,
+          "start_vertex": 6,
+          "subedge": 0,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 8,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 2,
+          "start_vertex": 7,
+          "subedge": 1,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 9,
+          "formal_occurrence_end_vertex": 9,
+          "formal_occurrence_start_vertex": 6,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 2,
+          "start_vertex": 8,
+          "subedge": 2,
+          "variable": "W1"
+        },
+        {
+          "end_vertex": 10,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 3,
+          "start_vertex": 9,
+          "subedge": 0,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 11,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 3,
+          "start_vertex": 10,
+          "subedge": 1,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 12,
+          "formal_occurrence_end_vertex": 12,
+          "formal_occurrence_start_vertex": 9,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 3,
+          "start_vertex": 11,
+          "subedge": 2,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 13,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 4,
+          "start_vertex": 12,
+          "subedge": 0,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 14,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 4,
+          "start_vertex": 13,
+          "subedge": 1,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 15,
+          "formal_occurrence_end_vertex": 15,
+          "formal_occurrence_start_vertex": 12,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 4,
+          "start_vertex": 14,
+          "subedge": 2,
+          "variable": "W0"
+        }
+      ],
+      "effective_intermediate_points_by_variable": {
+        "W0": 2,
+        "W1": 2
+      },
+      "formal_profile": "(P0 = a0) W0^-1 (a1) W1 (a2 = 0) W1^-1 (-a1) W0 (P1 = a3) W0^-1",
+      "intermediate_points_per_variable": 2,
+      "kappa_class_values": {
+        "KappaClass0": -2.3791374827694103,
+        "KappaClass1": -0.4384434784563101
+      },
+      "model": {
+        "curve_template": "up to 2 intermediate point(s) per formal variable, reduced by exact contact symmetries",
+        "limitations": "This certifies the displayed prototype contour and exact local curve-template compatibility for every terminal contact pair in the restricted polygonal model. It does not yet certify full three-copy non-overlap or absence of parasitic contacts.",
+        "status": "heuristic geometric candidate"
+      },
+      "objective": 3.3355817971994236e-13,
+      "profile_id": 429,
+      "signed_area": 1.1422331964860923,
+      "turn_error": 1.6216180398487268e-08,
+      "vertices": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.4153237457952311,
+          0.0
+        ],
+        [
+          0.47659254483288827,
+          1.36143289666049
+        ],
+        [
+          -0.4696751850698917,
+          2.2652467688708837
+        ],
+        [
+          -0.09799536282361548,
+          1.8804450792524428
+        ],
+        [
+          -0.34514664590012345,
+          1.6395568951940442
+        ],
+        [
+          -0.1753951364827494,
+          1.1433376498939736
+        ],
+        [
+          -0.005643627065375356,
+          0.6471184045939029
+        ],
+        [
+          -0.2527949101418835,
+          0.4062302205355045
+        ],
+        [
+          0.11888491210439273,
+          0.021428530917063593
+        ],
+        [
+          -0.8273828177983871,
+          0.925242403127458
+        ],
+        [
+          -0.7661140187607293,
+          2.286675299787948
+        ],
+        [
+          -0.35079027296549814,
+          2.286675299787948
+        ],
+        [
+          -0.7655477996645557,
+          2.3083549646345807
+        ],
+        [
+          -0.8977990976448557,
+          0.9519763331207194
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "voderberg_type": {
+        "classification_level": "formal_contact_topology",
+        "compatible_types": [
+          "type1"
+        ]
+      }
+    },
+    {
+      "angle_values": {
+        "a0": 0.7811237951390169,
+        "a1": -0.4344536320520259,
+        "a3": 2.9600893059472155
+      },
+      "case_id": 1447,
+      "closure_error": 9.437728759676332e-10,
+      "contact_template_constraint_max_error": 0.0,
+      "contact_template_constraints": {
+        "component_count": 2,
+        "components": [
+          {
+            "component_index": 0,
+            "effective_edge_count": 3,
+            "effective_intermediate_points": 2,
+            "forced_straight": false,
+            "free_internal_turn_parameter_count": 1,
+            "free_length_parameter_count": 3,
+            "mode": "free",
+            "representative": "W0",
+            "requested_edge_count": 3,
+            "requested_intermediate_points": 2,
+            "self_symmetry_group": [
+              "identity"
+            ],
+            "variable_transforms": {
+              "W0": "identity"
+            },
+            "variables": [
+              "W0"
+            ]
+          },
+          {
+            "component_index": 1,
+            "effective_edge_count": 3,
+            "effective_intermediate_points": 2,
+            "forced_straight": false,
+            "free_internal_turn_parameter_count": 1,
+            "free_length_parameter_count": 3,
+            "mode": "free",
+            "representative": "W1",
+            "requested_edge_count": 3,
+            "requested_intermediate_points": 2,
             "self_symmetry_group": [
               "identity"
             ],
@@ -153,33 +646,29 @@
             "transform": "identity"
           }
         ],
-        "requested_intermediate_points_per_variable": 3,
+        "requested_intermediate_points_per_variable": 2,
         "schema_version": "curve-template-duality-v1"
       },
       "curve_internal_turns": {
         "W0": [
-          -0.49589409785964833,
-          0.9235299421948003,
-          -0.5918977427029274
+          1.2153971756644284,
+          0.8921213762509008
         ],
         "W1": [
-          0.15120114863791773,
-          0.4963546409322574,
-          0.5340870110962519
+          0.05525995077954128,
+          1.0043843149257472
         ]
       },
       "curve_lengths": {
         "W0": [
-          1.1997444058225157,
-          0.3997860804679569,
-          0.8892578992713711,
-          1.0836445992202188
+          0.4491302438226995,
+          0.42624281369562206,
+          0.4135906553017802
         ],
         "W1": [
-          1.6448935746852875,
-          1.5282631607473407,
-          1.097248265002683,
-          1.7591236040305673
+          1.102973692130715,
+          0.6282359263453974,
+          1.0219829883001343
         ]
       },
       "curve_term_solution": {
@@ -334,6 +823,8 @@
         },
         {
           "end_vertex": 3,
+          "formal_occurrence_end_vertex": 3,
+          "formal_occurrence_start_vertex": 0,
           "formal_token": "W0",
           "inverse": false,
           "occurrence": 0,
@@ -343,14 +834,12 @@
         },
         {
           "end_vertex": 4,
-          "formal_occurrence_end_vertex": 4,
-          "formal_occurrence_start_vertex": 0,
-          "formal_token": "W0",
+          "formal_token": "W1",
           "inverse": false,
-          "occurrence": 0,
+          "occurrence": 1,
           "start_vertex": 3,
-          "subedge": 3,
-          "variable": "W0"
+          "subedge": 0,
+          "variable": "W1"
         },
         {
           "end_vertex": 5,
@@ -358,360 +847,269 @@
           "inverse": false,
           "occurrence": 1,
           "start_vertex": 4,
-          "subedge": 0,
+          "subedge": 1,
           "variable": "W1"
         },
         {
           "end_vertex": 6,
+          "formal_occurrence_end_vertex": 6,
+          "formal_occurrence_start_vertex": 3,
           "formal_token": "W1",
           "inverse": false,
           "occurrence": 1,
           "start_vertex": 5,
-          "subedge": 1,
+          "subedge": 2,
           "variable": "W1"
         },
         {
           "end_vertex": 7,
-          "formal_token": "W1",
-          "inverse": false,
-          "occurrence": 1,
-          "start_vertex": 6,
-          "subedge": 2,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 8,
-          "formal_occurrence_end_vertex": 8,
-          "formal_occurrence_start_vertex": 4,
-          "formal_token": "W1",
-          "inverse": false,
-          "occurrence": 1,
-          "start_vertex": 7,
-          "subedge": 3,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 9,
           "formal_token": "W1^-1",
           "inverse": true,
           "occurrence": 2,
-          "start_vertex": 8,
+          "start_vertex": 6,
           "subedge": 0,
           "variable": "W1"
         },
         {
-          "end_vertex": 10,
+          "end_vertex": 8,
           "formal_token": "W1^-1",
           "inverse": true,
           "occurrence": 2,
-          "start_vertex": 9,
+          "start_vertex": 7,
           "subedge": 1,
           "variable": "W1"
         },
         {
-          "end_vertex": 11,
+          "end_vertex": 9,
+          "formal_occurrence_end_vertex": 9,
+          "formal_occurrence_start_vertex": 6,
           "formal_token": "W1^-1",
           "inverse": true,
           "occurrence": 2,
-          "start_vertex": 10,
+          "start_vertex": 8,
           "subedge": 2,
           "variable": "W1"
         },
         {
-          "end_vertex": 12,
-          "formal_occurrence_end_vertex": 12,
-          "formal_occurrence_start_vertex": 8,
-          "formal_token": "W1^-1",
-          "inverse": true,
-          "occurrence": 2,
-          "start_vertex": 11,
-          "subedge": 3,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 13,
+          "end_vertex": 10,
           "formal_token": "W0^-1",
           "inverse": true,
           "occurrence": 3,
+          "start_vertex": 9,
+          "subedge": 0,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 11,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 3,
+          "start_vertex": 10,
+          "subedge": 1,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 12,
+          "formal_occurrence_end_vertex": 12,
+          "formal_occurrence_start_vertex": 9,
+          "formal_token": "W0^-1",
+          "inverse": true,
+          "occurrence": 3,
+          "start_vertex": 11,
+          "subedge": 2,
+          "variable": "W0"
+        },
+        {
+          "end_vertex": 13,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 4,
           "start_vertex": 12,
           "subedge": 0,
           "variable": "W0"
         },
         {
           "end_vertex": 14,
-          "formal_token": "W0^-1",
-          "inverse": true,
-          "occurrence": 3,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 4,
           "start_vertex": 13,
           "subedge": 1,
           "variable": "W0"
         },
         {
           "end_vertex": 15,
-          "formal_token": "W0^-1",
-          "inverse": true,
-          "occurrence": 3,
+          "formal_occurrence_end_vertex": 15,
+          "formal_occurrence_start_vertex": 12,
+          "formal_token": "W0",
+          "inverse": false,
+          "occurrence": 4,
           "start_vertex": 14,
           "subedge": 2,
           "variable": "W0"
         },
         {
           "end_vertex": 16,
-          "formal_occurrence_end_vertex": 16,
-          "formal_occurrence_start_vertex": 12,
-          "formal_token": "W0^-1",
-          "inverse": true,
-          "occurrence": 3,
+          "formal_token": "W1",
+          "inverse": false,
+          "occurrence": 5,
           "start_vertex": 15,
-          "subedge": 3,
-          "variable": "W0"
+          "subedge": 0,
+          "variable": "W1"
         },
         {
           "end_vertex": 17,
-          "formal_token": "W0",
+          "formal_token": "W1",
           "inverse": false,
-          "occurrence": 4,
+          "occurrence": 5,
           "start_vertex": 16,
-          "subedge": 0,
-          "variable": "W0"
+          "subedge": 1,
+          "variable": "W1"
         },
         {
           "end_vertex": 18,
-          "formal_token": "W0",
+          "formal_occurrence_end_vertex": 18,
+          "formal_occurrence_start_vertex": 15,
+          "formal_token": "W1",
           "inverse": false,
-          "occurrence": 4,
+          "occurrence": 5,
           "start_vertex": 17,
-          "subedge": 1,
-          "variable": "W0"
+          "subedge": 2,
+          "variable": "W1"
         },
         {
           "end_vertex": 19,
-          "formal_token": "W0",
-          "inverse": false,
-          "occurrence": 4,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 6,
           "start_vertex": 18,
-          "subedge": 2,
-          "variable": "W0"
+          "subedge": 0,
+          "variable": "W1"
         },
         {
           "end_vertex": 20,
-          "formal_occurrence_end_vertex": 20,
-          "formal_occurrence_start_vertex": 16,
-          "formal_token": "W0",
-          "inverse": false,
-          "occurrence": 4,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 6,
           "start_vertex": 19,
-          "subedge": 3,
-          "variable": "W0"
+          "subedge": 1,
+          "variable": "W1"
         },
         {
           "end_vertex": 21,
-          "formal_token": "W1",
-          "inverse": false,
-          "occurrence": 5,
+          "formal_occurrence_end_vertex": 21,
+          "formal_occurrence_start_vertex": 18,
+          "formal_token": "W1^-1",
+          "inverse": true,
+          "occurrence": 6,
           "start_vertex": 20,
-          "subedge": 0,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 22,
-          "formal_token": "W1",
-          "inverse": false,
-          "occurrence": 5,
-          "start_vertex": 21,
-          "subedge": 1,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 23,
-          "formal_token": "W1",
-          "inverse": false,
-          "occurrence": 5,
-          "start_vertex": 22,
           "subedge": 2,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 24,
-          "formal_occurrence_end_vertex": 24,
-          "formal_occurrence_start_vertex": 20,
-          "formal_token": "W1",
-          "inverse": false,
-          "occurrence": 5,
-          "start_vertex": 23,
-          "subedge": 3,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 25,
-          "formal_token": "W1^-1",
-          "inverse": true,
-          "occurrence": 6,
-          "start_vertex": 24,
-          "subedge": 0,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 26,
-          "formal_token": "W1^-1",
-          "inverse": true,
-          "occurrence": 6,
-          "start_vertex": 25,
-          "subedge": 1,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 27,
-          "formal_token": "W1^-1",
-          "inverse": true,
-          "occurrence": 6,
-          "start_vertex": 26,
-          "subedge": 2,
-          "variable": "W1"
-        },
-        {
-          "end_vertex": 28,
-          "formal_occurrence_end_vertex": 28,
-          "formal_occurrence_start_vertex": 24,
-          "formal_token": "W1^-1",
-          "inverse": true,
-          "occurrence": 6,
-          "start_vertex": 27,
-          "subedge": 3,
           "variable": "W1"
         }
       ],
       "effective_intermediate_points_by_variable": {
-        "W0": 3,
-        "W1": 3
+        "W0": 2,
+        "W1": 2
       },
       "formal_profile": "(P0 = a0) W0 (-a1) W1 (a2 = 0) W1^-1 (a1) W0^-1 (P1 = a3) W0 (-a1) W1 (a2 = 0) W1^-1",
-      "intermediate_points_per_variable": 3,
+      "intermediate_points_per_variable": 2,
       "kappa_class_values": {
-        "KappaClass0": -0.1642618983677754,
-        "KappaClass1": 1.181642800666427
+        "KappaClass0": 2.107518551915329,
+        "KappaClass1": 1.0596442657052885
       },
       "model": {
-        "curve_template": "up to 3 intermediate point(s) per formal variable, reduced by exact contact symmetries",
+        "curve_template": "up to 2 intermediate point(s) per formal variable, reduced by exact contact symmetries",
         "limitations": "This certifies the displayed prototype contour and exact local curve-template compatibility for every terminal contact pair in the restricted polygonal model. It does not yet certify full three-copy non-overlap or absence of parasitic contacts.",
         "status": "heuristic geometric candidate"
       },
-      "objective": 3.755883653236559e-12,
+      "objective": 2.465613261729495e-13,
       "profile_id": 428,
-      "signed_area": 15.959644886147103,
-      "turn_error": 3.131395054367658e-08,
+      "signed_area": 2.213572422459415,
+      "turn_error": 2.2125998810906822e-08,
       "vertices": [
         [
           0.0,
           0.0
         ],
         [
-          1.1997444058225157,
+          0.4491302438226995,
           0.0
         ],
         [
-          1.5513737076127807,
-          -0.19022550895824258
+          0.597447654075226,
+          0.3996059084187125
         ],
         [
-          2.3605528268329086,
-          0.17856815209719112
+          0.3859697114112969,
+          0.7550412892118854
         ],
         [
-          3.4296108345506164,
-          0.0013660258294896643
+          -0.5245900595713201,
+          1.3774815425700253
         ],
         [
-          3.410514415532136,
-          1.6461487466840146
+          -1.0620199072741914,
+          1.7028268021776123
         ],
         [
-          3.1627942719980036,
-          3.1542014708899293
+          -1.977759519650664,
+          1.2490975980266565
         ],
         [
-          2.4907764054132238,
-          4.021580132168981
+          -2.893499132027137,
+          0.7953683938757008
         ],
         [
-          0.855542762886653,
-          4.670060500882464
+          -3.4309289797300084,
+          1.1207136534832878
         ],
         [
-          -0.7796908796399178,
-          5.318540869595947
+          -4.341488750712625,
+          1.7431539068414277
         ],
         [
-          -1.4517087462246976,
-          6.185919530874998
+          -4.552966693376555,
+          2.0985892876346006
         ],
         [
-          -1.6994288897588299,
-          7.693972255080913
+          -4.404649283124028,
+          2.498195196053313
         ],
         [
-          -1.7185253087773105,
-          9.338754975935439
+          -3.9555190393013286,
+          2.498195196053313
         ],
         [
-          -0.6494673010596028,
-          9.161552849667737
+          -4.397271617072939,
+          2.579266991077075
         ],
         [
-          0.15971181816052504,
-          9.53034651072317
+          -4.615284917116307,
+          2.212997776930757
         ],
         [
-          0.51134111995079,
-          9.340121001764928
+          -4.471439912540587,
+          1.8252274263215762
         ],
         [
-          1.7110855257733057,
-          9.340121001764928
+          -3.6881932212962134,
+          1.048648012361097
         ],
         [
-          0.5895952501189687,
-          9.766320721280533
+          -3.218319060520264,
+          0.631636439156999
         ],
         [
-          0.32847731324022444,
-          10.06905217517345
+          -2.23571995605132,
+          0.9126137127427842
         ],
         [
-          -0.5589335912840308,
-          10.011767814760026
+          -1.2531208515823757,
+          1.1935909863285694
         ],
         [
-          -1.495311921369062,
-          10.557186223292701
-        ],
-        [
-          -2.0617571431722466,
-          9.012901701989296
-        ],
-        [
-          -2.365918524749101,
-          7.515212100484796
-        ],
-        [
-          -2.0458628875431066,
-          6.465679755035612
-        ],
-        [
-          -0.7476559780543204,
-          5.278593121965782
-        ],
-        [
-          0.5505509314344659,
-          4.091506488895952
-        ],
-        [
-          0.8706065686404599,
-          3.0419741434467693
-        ],
-        [
-          0.5664451870636069,
-          1.544284541942268
+          -0.7832466908064264,
+          0.7765794131244713
         ],
         [
           0.0,

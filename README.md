@@ -358,11 +358,31 @@ disjonction complète des trois intérieurs ni l'absence de tout contact parasit
 
 ## Filtres géométriques conjoints ajoutés
 
-`joint_angle_feasibility.py` remplace comme décision finale la juxtaposition de
-diagnostics angulaires séparés. Il maximise exactement une marge rationnelle
-commune sous les deux équations de rotation, les bornes ouvertes des classes
-d'angles et les deux contraintes de pôles. Les anciens filtres rapides restent
-utiles en amont, mais ne sont plus supposés équivalents au problème conjoint.
+`global_linear_contour_filter.py` est le filtre linéaire global actif. Il
+travaille uniquement sur les deux contours formels fermés déjà construits : le
+contour de la pièce et le contour extérieur des trois copies. Les interfaces
+internes ne sont pas résolues une seconde fois, car leur compatibilité appartient
+au solveur formel des contacts.
+
+Le filtre résout deux blocs rationnels exacts et indépendants :
+
+- un bloc angulaire réunissant les deux équations de tour, les deux contraintes
+  de pôles, les bornes des classes d'angles et les bornes principales de chaque
+  angle réellement rencontré sur les deux contours, y compris les angles
+  composites aux pôles extérieurs;
+- un bloc de longueurs géométriques positives, avec normalisation du périmètre
+  de la pièce et égalité du périmètre extérieur.
+
+Chaque bloc maximise une marge stricte rationnelle. Le profil est rejeté dès
+qu'un bloc n'admet aucune marge positive. Les anciens filtres d'angle rapides
+restent en amont comme pré-filtres bon marché.
+
+Les variables scalaires d'aire ne sont volontairement pas ajoutées à ce LP :
+sans cordes ni déterminants, `A_exterieur = 3*A_interieur` et les bornes
+isopérimétriques restent toujours satisfaisables en choisissant une aire
+positive arbitrairement petite. Les niveaux utiles suivants sont les relaxations
+corde-longueur (LP polyédrique ou SOCP), aire signée relevée (SDP), puis le
+système exact corde/rotation/aire (QF_NRA).
 
 `placed_copy_geometry.py` applique une seule isométrie globale à chaque copie et
 exprime tous ses points distingués dans le même repère que la pièce de
@@ -418,7 +438,7 @@ curve_term_solver.py                valeurs Straight/Mirror/Inverse
 curve_template_constraints.py       compilateur polygonal des termes de courbes
 external_boundary_constraints.py   système intérieur/extérieur
 rational_linear_program.py         simplexe exact sur les rationnels
-joint_angle_feasibility.py          contraintes angulaires conjointes exactes
+global_linear_contour_filter.py     filtre LP exact des deux contours décorés
 forced_point_coincidence.py        coïncidences forcées sur une frontière
 placed_copy_geometry.py            trois copies dans un repère symbolique commun
 joint_translation_z3.py            filtre polynomial et isométries globales

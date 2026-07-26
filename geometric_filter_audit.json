@@ -75,10 +75,10 @@
       "automatic_rejection_allowed": true,
       "description": "Exact necessary simultaneous inequalities at P0 and P1. Retained as a cheap early filter; the authoritative downstream check combines both poles with inner and outer rotation equations."
     },
-    "joint_angle_feasibility": {
+    "global_linear_contour_filter": {
       "status": "exact_within_model",
       "automatic_rejection_allowed": true,
-      "description": "One exact rational linear program jointly enforces the inner and outer total turns, every angle-class bound, and both strict pole margins. A profile survives only when a strictly positive rational margin exists."
+      "description": "Two exact rational LP blocks enforce the maximal useful linear model on the decorated reference and external contours: total turns, pole sectors, principal bounds on primitive and composite boundary turns, positive formal curve lengths, and equal normalized inner/outer perimeters."
     },
     "translation_holonomy_filter": {
       "status": "sound_rejection_incomplete_coverage",
@@ -2787,7 +2787,8 @@
     "formal_terminal_profile_instances": 874,
     "rejected_by_angular_filters_under_placement_parity": 802,
     "additionally_rejected_by_translation_holonomy": 8,
-    "remaining_after_all_current_filters": 64,
+    "primitive_profiles_reaching_shared_boundary_filters": 21,
+    "remaining_after_all_current_filters": 21,
     "would_be_pruned_at_placement_if_reflections_disabled": 424
   },
   "comparative_parity_impact_counts": {
@@ -2796,11 +2797,14 @@
     "additionally_rejected_by_placement_time_contact_parity": 807
   },
   "experimental_pipeline_counts": {
-    "profiles_examined": 64,
+    "profiles_examined": 21,
+    "formal_reduction_skipped_profile_count": 639,
     "external_boundary_build_errors": 0,
-    "legacy_joint_rotation_diagnostic_rejections": 34,
-    "exact_joint_angle_rejections": 36,
-    "joint_angle_filter_errors": 0,
+    "legacy_joint_rotation_diagnostic_rejections": 13,
+    "exact_global_linear_contour_rejections": 14,
+    "global_linear_angular_rejections": 14,
+    "global_linear_length_rejections": 0,
+    "global_linear_contour_filter_errors": 0,
     "exact_elementary_joint_translation_rejections": 0,
     "exact_inner_forced_point_coincidence_rejections": 0,
     "exact_outer_forced_point_coincidence_rejections": 0,
@@ -2808,10 +2812,10 @@
     "forced_point_filter_errors": 0,
     "exact_placed_copy_geometry_rejections": 0,
     "placed_copy_geometry_errors": 0,
-    "exact_encoded_model_rejections_total": 36,
-    "additional_exact_rejections_among_core_survivors": 36,
-    "core_survivors_after_experimental_exact_rejections": 28,
-    "z3_problems_generated_for_core_survivors": 28,
+    "exact_encoded_model_rejections_total": 14,
+    "additional_exact_rejections_among_core_survivors": 14,
+    "core_survivors_after_experimental_exact_rejections": 7,
+    "z3_problems_generated_for_core_survivors": 7,
     "z3_encoding_unsupported": 0,
     "z3_encoding_errors": 0,
     "z3_checks_requested": 0,
@@ -2844,7 +2848,7 @@
     "prototype translation-holonomy obstruction",
     "optional parity diagnostics",
     "shared inner/outer boundary construction",
-    "joint exact rational angle filter (inner, outer, and both poles)",
+    "exact global linear contour filter (inner/outer turns, principal point turns, poles, and normalized perimeters)",
     "elementary joint translation filter",
     "forced point coincidence filter on inner/outer boundaries",
     "shared-frame three-copy coincidence and same-side overlap filter",
